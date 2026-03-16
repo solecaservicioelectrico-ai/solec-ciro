@@ -438,22 +438,10 @@ body{background:var(--bg);color:var(--t);font-family:'DM Sans',sans-serif;min-he
   <!-- STOCK -->
   <div class="content" id="secStock" style="display:none">
 
-    <!-- Barra superior: buscador + multiplicador global -->
+    <!-- Barra superior: buscador -->
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:18px;">
       <input id="stockBuscar" placeholder="🔍 Buscar material..." oninput="renderStock()"
         style="flex:1;min-width:180px;background:var(--s2);border:1px solid var(--borde);border-radius:8px;padding:10px 14px;color:var(--t);font-size:14px;outline:none;">
-      <div style="display:flex;align-items:center;gap:8px;background:var(--s2);border:1px solid var(--borde);border-radius:8px;padding:8px 14px;">
-        <span style="font-size:12px;color:var(--t3);font-weight:700;white-space:nowrap;">INCREMENTAR PRECIOS</span>
-        <input id="stockPct" type="number" min="1" max="200" value="10"
-          style="width:60px;background:var(--s3);border:1px solid var(--borde);border-radius:6px;padding:6px 8px;color:var(--am);font-family:Bebas Neue,sans-serif;font-size:18px;text-align:center;outline:none;">
-        <span style="font-size:14px;color:var(--t2);font-weight:700;">%</span>
-        <button onclick="incrementarPrecios()" style="background:var(--am);border:none;border-radius:6px;padding:7px 14px;color:#000;font-family:Bebas Neue,sans-serif;font-size:13px;letter-spacing:1px;cursor:pointer;">APLICAR</button>
-      <button onclick="toggleHistorial()" style="background:transparent;border:1px solid var(--borde);border-radius:6px;padding:7px 12px;color:var(--t3);font-size:12px;cursor:pointer;" id="btnHistorial">📋 Historial</button>
-      </div>
-    <div id="historialIncrementos" style="display:none;background:var(--s2);border:1px solid var(--borde);border-radius:8px;padding:14px;margin-top:10px;">
-      <div style="font-size:11px;color:var(--t3);font-weight:800;letter-spacing:1.5px;margin-bottom:10px;">HISTORIAL DE INCREMENTOS</div>
-      <div id="historialBody"><div style="font-size:13px;color:var(--t3);">Sin registros aún</div></div>
-    </div>
       <button onclick="abrirAgregarMaterial()" style="background:var(--verde);border:none;border-radius:8px;padding:10px 18px;color:#000;font-family:Bebas Neue,sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;">+ MATERIAL</button>
     </div>
 
@@ -574,7 +562,8 @@ body{background:var(--bg);color:var(--t);font-family:'DM Sans',sans-serif;min-he
 // ══════════════════════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════════════════════
-var SHEETDB = 'https://sheetdb.io/api/v1/pqo4oljkpi6dj';
+var SHEETDB = 'https://sheetdb.io/api/v1/pqo4oljkpi6dj'; // LEGACY
+var API = 'https://script.google.com/macros/s/AKfycbxbWMbr2UGRLU-sfp7gb0iaTD8cWYygQF9zlCu7rTCAKM9w-PgskmzYe-UAy1h7bB0i/exec';
 var PIN_CIRO = '1234'; // ← Cambiar por el PIN real
 var PIN_ACTIVO = true;  // ← false = entra sin PIN
 
@@ -643,7 +632,7 @@ function init(){
   var meses=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   document.getElementById('topDate').textContent=dias[d.getDay()]+' '+d.getDate()+' '+meses[d.getMonth()]+' '+d.getFullYear();
   // Precargar catálogo de materiales para cálculos AFIP
-  fetch(SHEETDB+'?sheet=Catalogo_Materiales&limit=2000').then(function(r){return r.json();}).then(function(j){if(Array.isArray(j)){catalogoMateriales=j;todosLosMatsCiro=j;}}).catch(function(){});
+  fetch(API+'?sheet=Catalogo_Materiales&limit=2000').then(function(r){return r.json();}).then(function(j){if(Array.isArray(j)){catalogoMateriales=j;todosLosMatsCiro=j;}}).catch(function(){});
   // Fecha default filtro = hoy
   // Sin fecha default — muestra todos al abrir
   cargarEdificios();
@@ -655,7 +644,7 @@ function init(){
 // ══════════════════════════════════════════════════════════
 async function cargarEdificios(){
   try{
-    var r=await fetch(SHEETDB+'?sheet=Edificios&limit=200');
+    var r=await fetch(API+'?sheet=Edificios&limit=200');
     edificios=await r.json();
   }catch(e){}
 }
@@ -663,7 +652,7 @@ async function cargarEdificios(){
 async function cargarRegistros(){
   document.getElementById('tablaBody').innerHTML='<div class="loading"><div class="spinner"></div>Cargando...</div>';
   try{
-    var r=await fetch(SHEETDB+'?sheet=Registros&limit=500');
+    var r=await fetch(API+'?sheet=Registros&limit=500');
     var j=await r.json();
     registros=Array.isArray(j)?j:[];
     aplicarFiltros();
@@ -1021,7 +1010,7 @@ function abrirRegistro(cod){
         else if(intentos>20){
           clearInterval(timer);
           // Forzar carga del catalogo
-          fetch(SHEETDB+'?sheet=Catalogo_Materiales&limit=2000').then(function(r){return r.json();}).then(function(j){
+          fetch(API+'?sheet=Catalogo_Materiales&limit=2000').then(function(r){return r.json();}).then(function(j){
             if(Array.isArray(j)){catalogoMateriales=j;todosLosMatsCiro=j;calcYActualizar();}
           }).catch(function(){});
         }
@@ -1095,11 +1084,8 @@ function parsearInterv(txt){
 async function enviarAAprobacion(cod){
   var mo=document.getElementById('precioMO').value||'0';
   try{
-    await fetch(SHEETDB+'/Codigo/'+encodeURIComponent(cod)+'?sheet=Registros',{
-      method:'PATCH',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({data:{Estado:'Pendiente aprobacion','Monto MO':mo}})
-    });
+    await fetch(API+'?sheet=Registros',{method:'POST',headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({_method:'PATCH',_key:'Codigo',_val:cod,data:{Estado:'Pendiente aprobacion','Monto MO':mo}})});
     showToast('✅ Enviado a Ali para aprobación');
     cerrarModal();
     await cargarRegistros();
@@ -1109,11 +1095,8 @@ async function enviarAAprobacion(cod){
 async function marcarFacturado(cod){
   if(!confirm('¿Confirmar marcar como FACTURADO?\nEsta acción no se puede deshacer desde el panel.')){return;}
   try{
-    await fetch(SHEETDB+'/Codigo/'+encodeURIComponent(cod)+'?sheet=Registros',{
-      method:'PATCH',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({data:{Estado:'Facturado',Facturado:'si'}})
-    });
+    await fetch(API+'?sheet=Registros',{method:'POST',headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({_method:'PATCH',_key:'Codigo',_val:cod,data:{Estado:'Facturado',Facturado:'si'}})});
     showToast('✅ Marcado como facturado');
     cerrarModal();
     await cargarRegistros();
@@ -1454,7 +1437,7 @@ async function cargarStock(){
   document.getElementById('stockBody').innerHTML='<div class="loading"><div class="spinner"></div>Cargando...</div>';
   try{
     // Levanta del catálogo de materiales (misma hoja que el resto del sistema)
-    var r=await fetch(SHEETDB+'?sheet=Catalogo_Materiales&limit=2000');
+    var r=await fetch(API+'?sheet=Catalogo_Materiales&limit=2000');
     stockItems=await r.json();
     if(!Array.isArray(stockItems))stockItems=[];
     catalogoMateriales=stockItems;
@@ -1551,10 +1534,7 @@ function actualizarCantStockEl(el){
 async function actualizarCantStock(nombre,valor,campo){
   var v=parseInt(valor)||0;
   try{
-    await fetch(SHEETDB+'/Nombre/'+encodeURIComponent(nombre)+'?sheet=Catalogo_Materiales',{
-      method:'PATCH',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({data:{[campo]:v}})
-    });
+    await fetch(API+'?sheet=Catalogo_Materiales',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({_method:'PATCH',_key:'Nombre',_val:nombre,data:{[campo]:v}})});
     // Actualizar en memoria
     var item=stockItems.filter(function(m){return m.Nombre===nombre;})[0];
     if(item)item[campo]=v;
@@ -1605,10 +1585,8 @@ async function incrementarPrecios(){
     if(!precioActual)continue;
     var nuevoPrecio=Math.round(precioActual*(1+pct/100));
     try{
-      await fetch(SHEETDB+'/Nombre/'+encodeURIComponent(m.Nombre||'')+'?sheet=Catalogo_Materiales',{
-        method:'PATCH',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({data:{'Precio Unitario':nuevoPrecio}})
-      });
+      await fetch(API+'?sheet=Catalogo_Materiales',{method:'POST',headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({_method:'PATCH',_key:'Nombre',_val:m.Nombre||'',data:{'Precio Unitario':nuevoPrecio}})});
       m['Precio Unitario']=nuevoPrecio;
     }catch(e){errores++;}
   }
@@ -1671,18 +1649,14 @@ async function guardarMaterial(){
   var data={'Nombre':nombre,'Categoria':cat,'Precio Unitario':precio,'Stock Camioneta':cam,'Stock Deposito':dep};
   try{
     if(editandoMaterial){
-      await fetch(SHEETDB+'/Nombre/'+encodeURIComponent(editandoMaterial)+'?sheet=Catalogo_Materiales',{
-        method:'PATCH',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({data:data})
-      });
+      await fetch(API+'?sheet=Catalogo_Materiales',{method:'POST',headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({_method:'PATCH',_key:'Nombre',_val:editandoMaterial,data:data})});
       var item=stockItems.filter(function(m){return m.Nombre===editandoMaterial;})[0];
       if(item)Object.assign(item,data);
       showToast('✅ Material actualizado');
     }else{
-      await fetch(SHEETDB+'?sheet=Catalogo_Materiales',{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({data:[data]})
-      });
+      await fetch(API+'?sheet=Catalogo_Materiales',{method:'POST',headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({data:[data]})});
       stockItems.push(data);
       showToast('✅ Material agregado');
     }
@@ -1723,10 +1697,7 @@ async function guardarPrecioCiro(nombre,i){
   var btn=document.getElementById('cmbtn-'+i);
   if(btn){btn.textContent='...';btn.disabled=true;}
   try{
-    await fetch(SHEETDB+'/Nombre/'+encodeURIComponent(nombre)+'?sheet=Catalogo_Materiales',{
-      method:'PATCH',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({data:{'Precio Unitario':precio}})
-    });
+    await fetch(API+'?sheet=Catalogo_Materiales',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({_method:'PATCH',_key:'Nombre',_val:nombre,data:{'Precio Unitario':precio}})});
     if(inp)inp.classList.add('guardado');
     if(btn){btn.textContent='✅';setTimeout(function(){btn.textContent='Guardar';btn.disabled=false;},2000);}
     showToast('💰 Precio actualizado — "'+nombre+'"');
