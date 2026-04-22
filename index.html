@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>SOLEC — Panel Ciro</title>
+<title>SOLEC — Panel Ciro v1.4</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -869,8 +869,14 @@ function abrirRegistro(cod){
 
 
 
-  // ── Nota rechazo
-  var notaRech=reg['Nota Rechazo']||reg.NotaRechazo||'';
+  // Nota de Ali para Ciro
+  var notaCiro=reg['Nota Ciro']||reg.NotaCiro||reg['nota_ciro']||'';
+  if(notaCiro){
+    html+='<div style="background:rgba(74,158,255,.08);border:1px solid rgba(74,158,255,.3);border-radius:var(--rs);padding:12px 14px;margin-bottom:12px;">';
+    html+='<div style="font-size:11px;color:var(--azul);font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">📋 Nota de Ali</div>';
+    html+='<div style="font-size:13px;color:var(--t);font-weight:600;">'+esc(notaCiro)+'</div>';
+    html+='</div>';
+  }
 
   var html='';
 
@@ -893,8 +899,14 @@ function abrirRegistro(cod){
   var ivMatDisp=ivs.filter(function(iv){return iv.esMats;})[0]||null;
   html+='<div class="msec"><div class="msec-title">Intervenciones ('+ivsMoDisp.length+')</div>';
   ivsMoDisp.forEach(function(iv){
+    // Separar nota libre (entre comillas) del resto de la descripción
+    var descTexto=iv.desc||'';
+    var notaMatch=descTexto.match(/"([^"]+)"/);
+    var notaLibre=notaMatch?notaMatch[1]:'';
+    var descSinNota=descTexto.replace(/"[^"]*"/,'').replace(/·\s*$/,'').trim();
     html+='<div class="iv-item ok">'+
-      '<div class="iv-lin">'+esc(iv.desc)+'</div>'+
+      '<div class="iv-lin">'+esc(descSinNota)+'</div>'+
+      (notaLibre?'<div style="font-size:12px;color:var(--t2);font-style:italic;margin-top:4px;padding:4px 8px;background:rgba(255,255,255,.04);border-radius:4px;">📝 '+esc(notaLibre)+'</div>':'')+
     '</div>';
   });
   if(ivMatDisp&&ivMatDisp.mats.length>0){
@@ -1107,7 +1119,7 @@ async function marcarFacturado(cod){
 // AFIP
 // ══════════════════════════════════════════════════════════
 function abrirAfip(reg,cuit){
-  var cuitLimpio=(cuit||'').replace(/-/g,'').trim();
+  var cuitLimpio=String(cuit||'').replace(/-/g,'').trim();
   // MO: intentar desde input visible, si no desde el registro aprobado
   var moInp=document.getElementById('precioMO');
   var mo=moInp&&parseFloat(moInp.value)>0?parseFloat(moInp.value):parseFloat(reg['Monto MO']||reg.MO||0)||0;
@@ -1213,8 +1225,13 @@ function generarNombrePDF(reg,ivs){
 }
 
 function armarConceptoMO(iv, edif, fecha){
-  // Formato: descripcion de intervencion · edificio · fecha (max 400 chars)
-  var txt = (iv.desc||'') + ' · ' + (edif||'') + ' · ' + fecha;
+  // Separar nota libre (entre comillas) del desc
+  var descTexto=iv.desc||'';
+  var notaMatch=descTexto.match(/"([^"]+)"/);
+  var notaLibre=notaMatch?notaMatch[1]:'';
+  var descSinNota=descTexto.replace(/"[^"]*"/,'').replace(/·\s*$/,'').trim();
+  var txt=descSinNota+' · '+(edif||'')+' · '+fecha;
+  if(notaLibre) txt+=' · '+notaLibre;
   return txt.slice(0,400);
 }
 
@@ -1252,18 +1269,31 @@ function renderAfip(reg,cuit,mo,ivs,matTotal){
   var moData=[];
   try{moData=JSON.parse(reg['MO_Data']||'[]');}catch(e){}
   var mosPorIv=[];
-  if(moData.length===ivsMO.length){
-    // Calcular cada uno proporcional al precio de referencia
-    var refs=moData.map(function(d){
-      // calcularMORef no está en Ciro, reconstruimos simple: usar el valor si viene
-      return parseFloat(d.moRef||0)||0;
-    });
-    var totalRefs=refs.reduce(function(s,v){return s+v;},0);
-    if(totalRefs>0){
-      mosPorIv=refs.map(function(r){return Math.round(mo*(r/totalRefs));});
-      // Ajustar redondeo en el último
-      var suma=mosPorIv.reduce(function(s,v){return s+v;},0);
-      mosPorIv[mosPorIv.length-1]+=mo-suma;
+  var ivsMOdata=moData.filter(function(d){
+    var tv=(d.tipoVisita||'').toLowerCase();
+    return tv.indexOf('preventivo')===-1&&tv.indexOf('abono')===-1;
+  });
+  if(ivsMOdata.length===ivsMO.length){
+    // Primero intentar precio_aprobado (guardado por Ali al aprobar)
+    var tieneAprobados=ivsMOdata.every(function(d){return d.precio_aprobado!==undefined;});
+    if(tieneAprobados){
+      mosPorIv=ivsMOdata.map(function(d){return parseFloat(d.precio_aprobado)||0;});
+      // Verificar que sumen el total correcto, si no ajustar el último
+      var sumaApr=mosPorIv.reduce(function(s,v){return s+v;},0);
+      if(sumaApr!==mo&&mosPorIv.length){mosPorIv[mosPorIv.length-1]+=mo-sumaApr;}
+    } else {
+      // Fallback: usar peso proporcional por ubicaciones
+      var refs=ivsMOdata.map(function(d){
+        if(d.moRef&&parseFloat(d.moRef)>0) return parseFloat(d.moRef);
+        var ubs=d.ubs||[];
+        return Math.max(1,ubs.reduce(function(s,u){return s+(parseInt(u.qty)||1);},0));
+      });
+      var totalRefs=refs.reduce(function(s,v){return s+v;},0);
+      if(totalRefs>0){
+        mosPorIv=refs.map(function(r){return Math.round(mo*(r/totalRefs));});
+        var suma=mosPorIv.reduce(function(s,v){return s+v;},0);
+        mosPorIv[mosPorIv.length-1]+=mo-suma;
+      }
     }
   }
   if(!mosPorIv.length||mosPorIv.every(function(v){return v===0;})){
@@ -1311,7 +1341,7 @@ function renderAfip(reg,cuit,mo,ivs,matTotal){
 
   var html='<div style="font-size:11px;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Renglones — tocá 📋 para copiar cada concepto</div>';
 
-  // Un renglón por intervención de MO
+  // Un renglón por intervención de MO — monto editable
   ivsMO.forEach(function(iv,i){
     var concepto=armarConceptoMO(iv,edif,fecha);
     var moIv=mosPorIv[i]||0;
@@ -1327,8 +1357,9 @@ function renderAfip(reg,cuit,mo,ivs,matTotal){
         '<div style="font-size:13px;color:var(--t);font-weight:600;line-height:1.5;margin-bottom:10px;">'+esc(concepto)+'</div>'+
         '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'+
           '<div style="display:flex;gap:16px;font-size:13px;font-weight:800;">'+
-            '<span style="color:var(--t2);">$ <span style="color:var(--am);font-family:Bebas Neue,sans-serif;font-size:18px;">'+moIv.toLocaleString('es-AR')+'</span></span>'+
-            (dMo>0?'<span style="color:var(--rojo);">Desc. '+dMo+'%</span><span style="color:var(--verde);font-family:Bebas Neue,sans-serif;font-size:18px;">$'+moIvNeto.toLocaleString('es-AR')+'</span>':'')+
+            '<span style="color:var(--t2);font-size:13px;font-weight:800;">$</span>'+
+            '<input id="mo-iv-'+i+'" type="number" value="'+moIv+'" oninput="actualizarMoIv('+i+')" style="background:var(--s3);border:1.5px solid var(--borde);border-radius:8px;padding:6px 10px;color:var(--am);font-family:Bebas Neue,sans-serif;font-size:18px;width:130px;text-align:right;outline:none;"/>'+
+            (dMo>0?'<span style="color:var(--rojo);font-size:13px;">Desc. '+dMo+'%</span><span id="mo-iv-neto-'+i+'" style="color:var(--verde);font-family:Bebas Neue,sans-serif;font-size:18px;">$'+moIvNeto.toLocaleString('es-AR')+'</span>':'')+
           '</div>'+
           '<button onclick="copiarConcepto('+i+')" style="background:var(--azul);border:none;border-radius:8px;padding:8px 16px;color:#fff;font-family:Bebas Neue,sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;">'+
             '📋 COPIAR</button>'+
@@ -1365,6 +1396,7 @@ function renderAfip(reg,cuit,mo,ivs,matTotal){
 
   // Guardar conceptos para copiar
   window._afipConceptos=ivsMO.map(function(iv,i){return {concepto:armarConceptoMO(iv,edif,fecha),mo:mosPorIv[i]||0};});
+  window._afipRegActual=reg;
   window._afipConceptoMat=tieneMats?armarConceptoMats(ivs,edif,fecha):'';
 
   // Sugerir nombre PDF
@@ -1386,6 +1418,19 @@ function copiarConceptoUni(){
       try{document.execCommand('copy');showToast('✅ Copiado');}catch(e){showToast('❌ No se pudo copiar');}
       document.body.removeChild(ta);
     });
+}
+
+function actualizarMoIv(i){
+  var inp=document.getElementById('mo-iv-'+i);
+  if(!inp)return;
+  var val=parseFloat(inp.value)||0;
+  var netoEl=document.getElementById('mo-iv-neto-'+i);
+  if(netoEl){
+    var reg=window._afipRegActual||{};
+    var dMo=parseFloat(reg['Descuento MO']||reg['Descuento_MO']||0)||0;
+    netoEl.textContent='$'+(dMo>0?Math.round(val*(1-dMo/100)):val).toLocaleString('es-AR');
+  }
+  if(window._afipConceptos&&window._afipConceptos[i])window._afipConceptos[i].mo=val;
 }
 
 function copiarConcepto(idx){
@@ -1775,7 +1820,7 @@ function renderDemo(){
     var ivs=parsearInterv(reg.Intervenciones||'');
     var mo=parseFloat(reg['Monto MO']||0);
     var cuit=reg.CUIT||'';
-    var cuitLimpio=cuit.replace(/-/g,'');
+    var cuitLimpio=String(cuit||'').replace(/-/g,'');
     var tipColor={'Preventivo/Abono':'var(--verde)','Service':'var(--azul)','Urgencia':'var(--rojo)','Particular':'var(--lila)'}[reg['Tipo de Visita']]||'var(--t2)';
     var html='<div style="background:var(--s1);border:1px solid var(--borde);border-radius:var(--r);overflow:hidden;">';
     // Header
@@ -1858,7 +1903,7 @@ function renderDemo(){
 
 function abrirDemoAfip(idx){
   var reg=DEMO_REGISTROS[idx];
-  var cuit=(reg.CUIT||'').replace(/-/g,'');
+  var cuit=String(reg.CUIT||'').replace(/-/g,'');
   var mo=parseFloat(reg['Monto MO']||0);
   var ivs=parsearInterv(reg.Intervenciones||'');
   registroActual=reg;
