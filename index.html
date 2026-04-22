@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>SOLEC — Panel Ciro v1.5</title>
+<title>SOLEC — Panel Ciro v1.6</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -365,7 +365,7 @@ body{background:var(--bg);color:var(--t);font-family:'DM Sans',sans-serif;min-he
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v1.5</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v1.6</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -871,6 +871,7 @@ function abrirRegistro(cod){
 
 
   var html='';
+  var notaRech=reg['Nota Rechazo']||reg.NotaRechazo||'';
 
   // Nota de Ali para Ciro
   var notaCiro=reg['Nota Ciro']||reg.NotaCiro||reg['nota_ciro']||'';
