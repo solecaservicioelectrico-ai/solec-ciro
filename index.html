@@ -373,7 +373,7 @@ body{background:var(--bg);color:var(--t);font-family:'DM Sans',sans-serif;min-he
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.5</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.7</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -2217,7 +2217,7 @@ function cAgregarChecklist(body, porEdif, desde, hasta) {
   secAbonos.innerHTML='<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--verde);margin-bottom:8px">🏢 Abonos mensuales ('+todosAbonados.length+')</div>';
   todosAbonados.sort(function(a,b){return(a.Nombre||'').localeCompare(b.Nombre||'');}).forEach(function(e){
     var precio=Math.round((parseFloat(e['Precio Abono'])||0)*(parseFloat(e['Indice'])||1));
-    var nombre=ckGenerarNombre(e.Nombre,'Preventivo/Abono',hasta,false);
+    var nombre=ckNormNombre(e.Nombre)+'-'+String(hasta).substring(0,7).replace('-','-')+'-preventivo';
     secAbonos.appendChild(ckItem(nombre,(e['Administración']||''),precio,'var(--verde)'));
   });
   sec.appendChild(secAbonos);
@@ -2242,7 +2242,7 @@ function cAgregarChecklist(body, porEdif, desde, hasta) {
     trabajos.sort(function(a,b){return(a.Edificio||'').localeCompare(b.Edificio||'');}).forEach(function(r){
       var total=(parseFloat(r['Monto MO'])||0)+(parseFloat(r['Monto Materiales'])||0);
       var fecha=String(r.Fecha||'').split('T')[0];
-      var nombre=ckGenerarNombre(r.Edificio,r['Tipo de Visita']||'Service',fecha,false);
+      var nombre=ckNormNombre(r.Edificio)+'-'+fecha.substring(0,7)+'-'+ckNormNombre(r['Tipo de Visita']||'service');
       secTrab.appendChild(ckItem(nombre,r.Edificio+' · '+fecha.split('-').reverse().join('/'),total,'var(--azul)'));
     });
     sec.appendChild(secTrab);
@@ -2387,7 +2387,7 @@ function ckRender(){
     var id='tr'+i;if(ckChecked[id]===undefined)ckChecked[id]=false;
     var total=(parseFloat(r['Monto MO'])||0)+(parseFloat(r['Monto Materiales'])||0);
     var fecha=String(r.Fecha||'').split('T')[0];
-    var nombre=ckGenerarNombre(r.Edificio,r['Tipo de Visita']||'Service',fecha,false);
+    var nombre=ckNormNombre(r.Edificio)+'-'+fecha.substring(0,7)+'-'+ckNormNombre(r['Tipo de Visita']||'service');
     lT.appendChild(ckCrearItem(id,nombre,r.Edificio+' · '+fecha.split('-').reverse().join('/'),String(r['Tipo de Visita']||''),total,'var(--azul)'));
   });
 }
