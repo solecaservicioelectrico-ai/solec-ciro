@@ -373,7 +373,7 @@ body{background:var(--bg);color:var(--t);font-family:'DM Sans',sans-serif;min-he
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.7</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.8</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -2126,126 +2126,110 @@ function cCopiar(txtId,btnId){var el=document.getElementById(txtId);if(!el)retur
 // CHECKLIST DE FACTURACIÓN
 // ══════════════════════════════════════════════════════════
 function cAgregarChecklist(body, porEdif, desde, hasta) {
-  var desdeF=desde.split('-').reverse().join('/');
-  var hastaF=hasta.split('-').reverse().join('/');
-  var abonadosSet=new Set(cState.edificios.filter(function(e){return String(e.Abonado||'').toLowerCase()==='si';}).map(function(e){return e.Nombre;}));
+  // Normaliza nombre para boleta
+  function norm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9\s]/g,'').trim().replace(/\s+/g,'-');}
+  function genNombre(edif,fecha,esMats){
+    var meses=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    var p=String(fecha||'').split('T')[0].split('-');
+    var m=p[1]?meses[parseInt(p[1])-1]||p[1]:'';
+    return m+'-'+(p[0]||'')+'-'+norm(edif)+'-'+(esMats?'mat-preventivo':'preventivo');
+  }
+  function genNombreTrabajo(edif,tipo,fecha){
+    var p=String(fecha||'').split('T')[0].split('-');
+    var meses=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    var m=p[1]?meses[parseInt(p[1])-1]||p[1]:'';
+    return m+'-'+(p[0]||'')+'-'+norm(edif)+'-'+norm(tipo||'service');
+  }
+  function fmt(n){if(!n||isNaN(n))return '0';return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
 
-  // Trabajos particulares = registros aprobados NO abonados en el período
-  var trabajos=cState.registros.filter(function(r){return !abonadosSet.has(r.Edificio);});
-
-  // Calcular totales
-  var todosAbonados=cState.edificios.filter(function(e){return String(e.Abonado||'').toLowerCase()==='si';});
-  var totalAbonos=todosAbonados.reduce(function(s,e){return s+Math.round((parseFloat(e['Precio Abono'])||0)*(parseFloat(e['Indice'])||1));},0);
+  var abonadosSet=new Set((cState.edificios||[]).filter(function(e){return String(e.Abonado||'').toLowerCase()==='si';}).map(function(e){return e.Nombre;}));
+  var todosAbonados=(cState.edificios||[]).filter(function(e){return String(e.Abonado||'').toLowerCase()==='si';});
+  var trabajos=(cState.registros||[]).filter(function(r){return !abonadosSet.has(r.Edificio);});
 
   var matsPorEdif={};
   Object.keys(porEdif).forEach(function(edif){
     var t=porEdif[edif].reduce(function(s,r){return s+(parseFloat(r['Monto Materiales'])||0);},0);
     if(t>0)matsPorEdif[edif]=t;
   });
-  var totalMats=Object.values(matsPorEdif).reduce(function(s,v){return s+v;},0);
-  var totalTrab=trabajos.reduce(function(s,r){return s+(parseFloat(r['Monto MO'])||0)+(parseFloat(r['Monto Materiales'])||0);},0);
-  var totalBoletas=todosAbonados.length+Object.keys(matsPorEdif).length+trabajos.length;
 
-  // Crear sección checklist
+  var totalA=todosAbonados.reduce(function(s,e){return s+Math.round((parseFloat(e['Precio Abono'])||0)*(parseFloat(e['Indice'])||1));},0);
+  var totalM=Object.values(matsPorEdif).reduce(function(s,v){return s+v;},0);
+  var totalT=trabajos.reduce(function(s,r){return s+(parseFloat(r['Monto MO'])||0)+(parseFloat(r['Monto Materiales'])||0);},0);
+  var desdeF=desde.split('-').reverse().join('/');
+  var hastaF=hasta.split('-').reverse().join('/');
+
   var sec=document.createElement('div');
   sec.style.cssText='margin-top:20px;border-top:3px solid var(--am);padding-top:16px';
 
-  // Header checklist
-  sec.innerHTML=
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">'+
-      '<div>'+
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:2px;color:var(--am)">✅ Checklist de facturación</div>'+
-        '<div style="font-size:12px;color:var(--t3);font-weight:600">'+desdeF+' → '+hastaF+'</div>'+
-      '</div>'+
-      '<div onclick="window.print()" style="background:var(--azul);border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:800;color:#fff;cursor:pointer">🖨️ Imprimir</div>'+
-    '</div>'+
-    // Resumen
-    '<div style="background:linear-gradient(135deg,#0a1a0a,var(--s1));border:1px solid rgba(0,200,150,.35);border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;gap:0;flex-wrap:wrap">'+
-      '<div style="flex:1;min-width:80px;text-align:center;padding:8px;border-right:1px solid rgba(0,200,150,.2)">'+
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:26px;color:var(--verde)">'+todosAbonados.length+'</div>'+
-        '<div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--t3)">Abonos</div>'+
-        '<div style="font-size:12px;font-weight:700;color:var(--verde)">$'+cFmtPeso(totalAbonos)+'</div>'+
-      '</div>'+
-      '<div style="flex:1;min-width:80px;text-align:center;padding:8px;border-right:1px solid rgba(0,200,150,.2)">'+
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:26px;color:var(--am)">'+Object.keys(matsPorEdif).length+'</div>'+
-        '<div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--t3)">Mats</div>'+
-        '<div style="font-size:12px;font-weight:700;color:var(--am)">$'+cFmtPeso(totalMats)+'</div>'+
-      '</div>'+
-      '<div style="flex:1;min-width:80px;text-align:center;padding:8px;border-right:1px solid rgba(0,200,150,.2)">'+
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:26px;color:var(--azul)">'+trabajos.length+'</div>'+
-        '<div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--t3)">Part.</div>'+
-        '<div style="font-size:12px;font-weight:700;color:var(--azul)">$'+cFmtPeso(totalTrab)+'</div>'+
-      '</div>'+
-      '<div style="flex:1;min-width:80px;text-align:center;padding:8px">'+
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:26px;color:var(--t)">'+totalBoletas+'</div>'+
-        '<div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--t3)">Boletas</div>'+
-        '<div style="font-size:12px;font-weight:700;color:var(--t)">$'+cFmtPeso(totalAbonos+totalMats+totalTrab)+'</div>'+
-      '</div>'+
-    '</div>';
+  // Header + resumen
+  var hdr=document.createElement('div');
+  hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px';
+  hdr.innerHTML=
+    '<div><div style="font-family:Bebas Neue,sans-serif;font-size:22px;letter-spacing:2px;color:var(--am)">CHECK LIST</div>'+
+    '<div style="font-size:12px;color:var(--t3);font-weight:600">'+desdeF+' → '+hastaF+'</div></div>'+
+    '<div onclick="window.print()" style="background:var(--azul);border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:800;color:#fff;cursor:pointer">Imprimir</div>';
+  sec.appendChild(hdr);
 
-  // Función para crear ítem del checklist
-  function ckItem(nombre, sub, monto, color) {
-    var id='ckx-'+Math.random().toString(36).substr(2,8);
-    var div=document.createElement('div');
-    div.id=id;
-    div.style.cssText='background:var(--s1);border:1px solid var(--borde);border-left:4px solid '+color+';border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:6px;transition:opacity .2s';
-    div.innerHTML=
-      '<div id="chk-'+id+'" style="width:24px;height:24px;border-radius:7px;border:2px solid '+color+';background:transparent;display:flex;align-items:center;justify-content:center;flex-shrink:0"></div>'+
-      '<div style="flex:1;min-width:0">'+
-        '<div id="tit-'+id+'" style="font-family:\'Bebas Neue\',sans-serif;font-size:15px;letter-spacing:1px;color:var(--t)">'+nombre+'</div>'+
-        (sub?'<div style="font-size:11px;color:var(--t3);font-weight:600">'+sub+'</div>':'')+
+  var res=document.createElement('div');
+  res.style.cssText='background:var(--s2);border:1px solid rgba(0,200,150,.3);border-radius:10px;padding:12px;margin-bottom:14px;display:flex;text-align:center';
+  res.innerHTML=
+    '<div style="flex:1;border-right:1px solid var(--borde)"><div style="font-size:22px;font-weight:900;color:var(--verde)">'+todosAbonados.length+'</div><div style="font-size:10px;color:var(--t3);font-weight:700">ABONOS</div><div style="font-size:12px;font-weight:800;color:var(--verde)">$'+fmt(totalA)+'</div></div>'+
+    '<div style="flex:1;border-right:1px solid var(--borde)"><div style="font-size:22px;font-weight:900;color:var(--am)">'+Object.keys(matsPorEdif).length+'</div><div style="font-size:10px;color:var(--t3);font-weight:700">MATS</div><div style="font-size:12px;font-weight:800;color:var(--am)">$'+fmt(totalM)+'</div></div>'+
+    '<div style="flex:1;border-right:1px solid var(--borde)"><div style="font-size:22px;font-weight:900;color:var(--azul)">'+trabajos.length+'</div><div style="font-size:10px;color:var(--t3);font-weight:700">PART.</div><div style="font-size:12px;font-weight:800;color:var(--azul)">$'+fmt(totalT)+'</div></div>'+
+    '<div style="flex:1"><div style="font-size:22px;font-weight:900;color:var(--t)">'+(todosAbonados.length+Object.keys(matsPorEdif).length+trabajos.length)+'</div><div style="font-size:10px;color:var(--t3);font-weight:700">BOLETAS</div><div style="font-size:12px;font-weight:800;color:var(--t)">$'+fmt(totalA+totalM+totalT)+'</div></div>';
+  sec.appendChild(res);
+
+  function mkItem(nombre,sub,monto,color){
+    var id='ci'+Math.random().toString(36).substr(2,6);
+    var d=document.createElement('div');
+    d.style.cssText='background:var(--s1);border:1px solid var(--borde);border-left:4px solid '+color+';border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:5px';
+    d.innerHTML=
+      '<div id="c'+id+'" style="width:22px;height:22px;border-radius:6px;border:2px solid '+color+';flex-shrink:0;display:flex;align-items:center;justify-content:center"></div>'+
+      '<div style="flex:1"><div style="font-size:14px;font-weight:800;color:var(--t)" id="t'+id+'">'+nombre+'</div>'+
+      (sub?'<div style="font-size:11px;color:var(--t3)">'+sub+'</div>':'')+
       '</div>'+
-      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:17px;color:'+color+';flex-shrink:0" id="mon-'+id+'">$'+cFmtPeso(monto)+'</div>';
-    div.onclick=function(){
-      var checked=div.dataset.checked==='1';
-      checked=!checked;
-      div.dataset.checked=checked?'1':'0';
-      div.style.opacity=checked?'0.35':'1';
-      div.style.borderLeftColor=checked?'var(--t3)':color;
-      var chk=document.getElementById('chk-'+id);
-      if(chk){chk.style.borderColor=checked?color:'var(--t3)';chk.style.background=checked?color:'transparent';chk.innerHTML=checked?'<span style="color:#000;font-size:14px;font-weight:900">✓</span>':'';}
-      var tit=document.getElementById('tit-'+id);
-      if(tit)tit.style.textDecoration=checked?'line-through':'none';
-      var mon=document.getElementById('mon-'+id);
-      if(mon)mon.style.color=checked?'var(--t3)':color;
+      '<div style="font-size:16px;font-weight:800;color:'+color+'" id="m'+id+'">$'+fmt(monto)+'</div>';
+    d.onclick=function(){
+      var on=d.dataset.on==='1';on=!on;d.dataset.on=on?'1':'0';
+      d.style.opacity=on?'0.35':'1';
+      d.style.borderLeftColor=on?'var(--t3)':color;
+      var chk=document.getElementById('c'+id);
+      if(chk){chk.style.background=on?color:'transparent';chk.innerHTML=on?'<span style="color:#000;font-size:12px;font-weight:900">✓</span>':'';}
+      var tit=document.getElementById('t'+id);if(tit)tit.style.textDecoration=on?'line-through':'none';
+      var mon=document.getElementById('m'+id);if(mon)mon.style.color=on?'var(--t3)':color;
     };
-    return div;
+    return d;
   }
 
   // ABONOS
-  var secAbonos=document.createElement('div');
-  secAbonos.innerHTML='<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--verde);margin-bottom:8px">🏢 Abonos mensuales ('+todosAbonados.length+')</div>';
+  var sA=document.createElement('div');
+  sA.innerHTML='<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--verde);margin:10px 0 6px">Abonos mensuales ('+todosAbonados.length+')</div>';
   todosAbonados.sort(function(a,b){return(a.Nombre||'').localeCompare(b.Nombre||'');}).forEach(function(e){
     var precio=Math.round((parseFloat(e['Precio Abono'])||0)*(parseFloat(e['Indice'])||1));
-    var nombre=ckNormNombre(e.Nombre)+'-'+String(hasta).substring(0,7).replace('-','-')+'-preventivo';
-    secAbonos.appendChild(ckItem(nombre,(e['Administración']||''),precio,'var(--verde)'));
+    sA.appendChild(mkItem(genNombre(e.Nombre,hasta,false),(e['Administración']||''),precio,'var(--verde)'));
   });
-  sec.appendChild(secAbonos);
+  sec.appendChild(sA);
 
   // MATERIALES
   if(Object.keys(matsPorEdif).length>0){
-    var secMats=document.createElement('div');
-    secMats.style.marginTop='14px';
-    secMats.innerHTML='<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--am);margin-bottom:8px">📦 Materiales de abono ('+Object.keys(matsPorEdif).length+')</div>';
+    var sM=document.createElement('div');
+    sM.innerHTML='<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--am);margin:10px 0 6px">Materiales de abono ('+Object.keys(matsPorEdif).length+')</div>';
     Object.keys(matsPorEdif).sort().forEach(function(edif){
-      var nombre=ckGenerarNombre(edif,'Preventivo/Abono',hasta,true);
-      secMats.appendChild(ckItem(nombre,edif,matsPorEdif[edif],'var(--am)'));
+      sM.appendChild(mkItem(genNombre(edif,hasta,true),edif,matsPorEdif[edif],'var(--am)'));
     });
-    sec.appendChild(secMats);
+    sec.appendChild(sM);
   }
 
   // TRABAJOS PARTICULARES
   if(trabajos.length>0){
-    var secTrab=document.createElement('div');
-    secTrab.style.marginTop='14px';
-    secTrab.innerHTML='<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--azul);margin-bottom:8px">⚡ Trabajos particulares ('+trabajos.length+')</div>';
+    var sT=document.createElement('div');
+    sT.innerHTML='<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--azul);margin:10px 0 6px">Trabajos particulares ('+trabajos.length+')</div>';
     trabajos.sort(function(a,b){return(a.Edificio||'').localeCompare(b.Edificio||'');}).forEach(function(r){
       var total=(parseFloat(r['Monto MO'])||0)+(parseFloat(r['Monto Materiales'])||0);
       var fecha=String(r.Fecha||'').split('T')[0];
-      var nombre=ckNormNombre(r.Edificio)+'-'+fecha.substring(0,7)+'-'+ckNormNombre(r['Tipo de Visita']||'service');
-      secTrab.appendChild(ckItem(nombre,r.Edificio+' · '+fecha.split('-').reverse().join('/'),total,'var(--azul)'));
+      sT.appendChild(mkItem(genNombreTrabajo(r.Edificio,r['Tipo de Visita'],fecha),r.Edificio+' · '+fecha.split('-').reverse().join('/'),total,'var(--azul)'));
     });
-    sec.appendChild(secTrab);
+    sec.appendChild(sT);
   }
 
   body.appendChild(sec);
