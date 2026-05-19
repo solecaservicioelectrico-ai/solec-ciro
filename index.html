@@ -373,7 +373,7 @@ body{background:var(--bg);color:var(--t);font-family:'DM Sans',sans-serif;min-he
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.1</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.2</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -2120,31 +2120,30 @@ function cCopiar(txtId,btnId){var el=document.getElementById(txtId);if(!el)retur
 // ══════════════════════════════════════════════════════════
 // CHECKLIST DE FACTURACIÓN
 // ══════════════════════════════════════════════════════════
-async function cGuardarChecklist(porEdif,desde,hasta){
-  try{
-    var items=[];
-    var ts=new Date().toISOString();
-    // Abonos — uno por edificio consolidado
-    Object.keys(porEdif).sort().forEach(function(edif){
-      var regs=porEdif[edif];
-      // MO — una boleta por visita
-      regs.forEach(function(r){
-        var nombre=ckGenerarNombre(edif,'Preventivo/Abono',String(r.Fecha||'').split('T')[0],false);
-        var moMonto=parseFloat(r['Monto MO'])||0;
-        items.push({ID:'CK-'+Date.now()+'-'+Math.random().toString(36).substr(2,5),Periodo_Desde:desde,Periodo_Hasta:hasta,Nombre_Boleta:nombre,Edificio:edif,Tipo:'Abono MO',Descripcion:'Abono mensual - visita '+String(r.Fecha||'').split('T')[0].split('-').reverse().join('/'),Monto:moMonto,Estado:'Pendiente',Timestamp:ts});
-      });
-      // Materiales — una boleta por edificio
-      var totalMats=regs.reduce(function(s,r){return s+(parseFloat(r['Monto Materiales'])||0);},0);
-      if(totalMats>0){
-        var nombreMat=ckGenerarNombre(edif,'Preventivo/Abono',regs[0].Fecha||desde,true);
-        items.push({ID:'CK-'+Date.now()+'-'+Math.random().toString(36).substr(2,5),Periodo_Desde:desde,Periodo_Hasta:hasta,Nombre_Boleta:nombreMat,Edificio:edif,Tipo:'Materiales Abono',Descripcion:'Materiales período '+desde.split('-').reverse().join('/')+' → '+hasta.split('-').reverse().join('/'),Monto:totalMats,Estado:'Pendiente',Timestamp:ts});
-      }
+function cGuardarChecklist(porEdif,desde,hasta){
+  var items=[];
+  var ts=new Date().toISOString();
+  Object.keys(porEdif).sort().forEach(function(edif){
+    var regs=porEdif[edif];
+    // Una boleta por visita (MO)
+    regs.forEach(function(r){
+      var nombre=ckGenerarNombre(edif,'Preventivo/Abono',String(r.Fecha||'').split('T')[0],false);
+      var moMonto=parseFloat(r['Monto MO'])||0;
+      items.push({ID:'ab-'+edif+'-'+String(r.Fecha||'').split('T')[0],Periodo_Desde:desde,Periodo_Hasta:hasta,Nombre_Boleta:nombre,Edificio:edif,Tipo:'Abono MO',Descripcion:'Visita '+String(r.Fecha||'').split('T')[0].split('-').reverse().join('/'),Monto:moMonto,Estado:'Pendiente'});
     });
-    // Guardar en Sheet — borrar periodo anterior y escribir nuevos
-    for(var i=0;i<items.length;i++){
-      await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'appendRow',sheet:'Checklist_Periodo',data:items[i]})});
+    // Una boleta por edificio (materiales)
+    var totalMats=regs.reduce(function(s,r){return s+(parseFloat(r['Monto Materiales'])||0);},0);
+    if(totalMats>0){
+      var nombreMat=ckGenerarNombre(edif,'Preventivo/Abono',regs[0].Fecha||desde,true);
+      items.push({ID:'mat-'+edif,Periodo_Desde:desde,Periodo_Hasta:hasta,Nombre_Boleta:nombreMat,Edificio:edif,Tipo:'Materiales Abono',Descripcion:'Materiales período',Monto:totalMats,Estado:'Pendiente'});
     }
-    console.log('Checklist guardado: '+items.length+' ítems');
+  });
+  // Guardar en memoria del navegador
+  try{
+    var key='ck_'+desde+'_'+hasta;
+    sessionStorage.setItem(key,JSON.stringify(items));
+    sessionStorage.setItem('ck_ultimo_periodo',JSON.stringify({desde:desde,hasta:hasta}));
+    console.log('Checklist en memoria: '+items.length+' ítems');
   }catch(e){console.error('Error guardando checklist:',e);}
 }
 
@@ -2155,19 +2154,21 @@ function ckSetAtajo(t){var h=new Date(),d,u=new Date().toISOString().split('T')[
 function ckVolverPaso1(){document.getElementById('ck-resultado').style.display='none';document.getElementById('ck-paso1').style.display='block';}
 function ckFmt(n){if(!n||isNaN(n))return '0';return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
 async function ckBuscar(){var desde=document.getElementById('ckDesde').value,hasta=document.getElementById('ckHasta').value;if(!desde||!hasta){showToast('Elegí las fechas');return;}ckState.desde=desde;ckState.hasta=hasta;var btn=document.getElementById('ckBtnBuscar');btn.textContent='Cargando...';btn.disabled=true;try{
-  var[rE,rR,rCK]=await Promise.all([
+  var[rE,rR]=await Promise.all([
     fetch(API+'?sheet=Edificios').then(r=>r.json()),
-    fetch(API+'?sheet=Registros').then(r=>r.json()),
-    fetch(API+'?sheet=Checklist_Periodo').then(r=>r.json())
+    fetch(API+'?sheet=Registros').then(r=>r.json())
   ]);
   ckState.edificios=Array.isArray(rE)?rE:[];
   var todos=Array.isArray(rR)?rR:[];
   ckState.registros=todos.filter(function(r){if(!r.Fecha)return false;var f=String(r.Fecha).split('T')[0];var est=String(r.Estado||'').toLowerCase();return f>=desde&&f<=hasta&&(est==='aprobado'||est==='facturado');});
-  // Items del checklist guardados por el consolidador
-  ckState.ckItems=Array.isArray(rCK)?rCK.filter(function(i){return i.Periodo_Desde===desde&&i.Periodo_Hasta===hasta;}):[];
+  // Leer items del checklist guardados por el consolidador en memoria
+  try{
+    var key='ck_'+desde+'_'+hasta;
+    var saved=sessionStorage.getItem(key);
+    ckState.ckItems=saved?JSON.parse(saved):[];
+  }catch(e){ckState.ckItems=[];}
   ckChecked={};
-  // Restaurar estados guardados
-  ckState.ckItems.forEach(function(item){ckChecked[item.ID]=String(item.Estado||'').toLowerCase()==='facturado';});
+  ckState.ckItems.forEach(function(item){ckChecked[item.ID]=item.Estado==='Facturado';});
   ckRender();document.getElementById('ck-paso1').style.display='none';document.getElementById('ck-resultado').style.display='block';
 }catch(e){showToast('Error al cargar datos');}finally{btn.textContent='Generar checklist';btn.disabled=false;}}
 function ckRender(){
@@ -2246,13 +2247,17 @@ function ckRender(){
 function ckCrearItem(id,titulo,sub,desc,monto,color){var ch=ckChecked[id]||false;var div=document.createElement('div');div.id='ckitem-'+id;div.style.cssText='background:var(--s1);border:1px solid '+(ch?'rgba(0,0,0,.15)':'var(--borde)')+';border-left:4px solid '+(ch?'var(--t3)':color)+';border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;opacity:'+(ch?'0.4':'1');div.onclick=function(){ckToggle(id,color);};var chk=document.createElement('div');chk.id='ckchk-'+id;chk.style.cssText='width:26px;height:26px;border-radius:8px;border:2px solid '+(ch?color:'var(--borde)')+';background:'+(ch?color:'transparent')+';display:flex;align-items:center;justify-content:center;flex-shrink:0';chk.innerHTML=ch?'<span style="color:#000;font-size:15px;font-weight:900">✓</span>':'';var info=document.createElement('div');info.style.cssText='flex:1;min-width:0';info.innerHTML='<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;letter-spacing:1px;color:'+(ch?'var(--t3)':'var(--t)')+'">'+titulo+'</div>'+(sub?'<div style="font-size:11px;color:var(--t3);font-weight:600">'+sub+'</div>':'')+'<div style="font-size:11px;color:var(--t3);font-weight:600">'+desc+'</div>';var mon=document.createElement('div');mon.style.cssText='text-align:right;flex-shrink:0';mon.innerHTML='<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:'+(ch?'var(--t3)':color)+'">$'+ckFmt(monto)+'</div>'+(ch?'<div style="font-size:10px;color:var(--verde);font-weight:800">✓ FACTURADO</div>':'');div.appendChild(chk);div.appendChild(info);div.appendChild(mon);return div;}
 function ckToggle(id,color){ckChecked[id]=!ckChecked[id];var ch=ckChecked[id];var item=document.getElementById('ckitem-'+id);var chk=document.getElementById('ckchk-'+id);if(item){item.style.borderLeftColor=ch?'var(--t3)':color;item.style.borderColor=ch?'rgba(0,0,0,.15)':'var(--borde)';item.style.opacity=ch?'0.4':'1';}if(chk){chk.style.borderColor=ch?color:'var(--borde)';chk.style.background=ch?color:'transparent';chk.innerHTML=ch?'<span style="color:#000;font-size:15px;font-weight:900">✓</span>':'';}var info=item?item.querySelector('div:nth-child(2)'):null;var mon=item?item.querySelector('div:nth-child(3)'):null;if(info){var d=info.querySelector('div');if(d)d.style.color=ch?'var(--t3)':'var(--t)';}if(mon){var d=mon.querySelector('div');if(d)d.style.color=ch?'var(--t3)':color;var badge=mon.querySelector('div:nth-child(2)');if(ch&&!badge){var b=document.createElement('div');b.style.cssText='font-size:10px;color:var(--verde);font-weight:800';b.textContent='✓ FACTURADO';mon.appendChild(b);}else if(!ch&&badge)badge.remove();}ckGuardarEstado(id,ch);}
 
-async function ckGuardarEstado(id,facturado){
+function ckGuardarEstado(id,facturado){
   try{
-    var estado=facturado?'Facturado':'Pendiente';
-    await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({_method:'PATCH',_key:'ID',_val:id,sheet:'Checklist_Periodo',data:{Estado:estado}})
-    });
-  }catch(e){console.error('Error guardando estado checklist:',e);}
+    // Actualizar en memoria
+    var ul=sessionStorage.getItem('ck_ultimo_periodo');
+    if(!ul)return;
+    var p=JSON.parse(ul);
+    var key='ck_'+p.desde+'_'+p.hasta;
+    var items=JSON.parse(sessionStorage.getItem(key)||'[]');
+    items.forEach(function(item){if(item.ID===id)item.Estado=facturado?'Facturado':'Pendiente';});
+    sessionStorage.setItem(key,JSON.stringify(items));
+  }catch(e){console.error('Error guardando estado:',e);}
 }
 
 </script>
