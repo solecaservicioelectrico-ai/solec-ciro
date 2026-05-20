@@ -373,7 +373,7 @@ body{background:var(--bg);color:var(--t);font-family:'DM Sans',sans-serif;min-he
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.8</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.10</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -1420,43 +1420,18 @@ function renderAfip(reg,cuit,mo,ivs,matTotal){
     return;
   }
 
-  // Distribuir MO entre intervenciones
-  // Si hay MO_Data con precios individuales, usar esos; sino dividir en partes iguales
-  var moData=[];
-  try{moData=JSON.parse(reg['MO_Data']||'[]');}catch(e){}
-  var mosPorIv=[];
-  var ivsMOdata=moData.filter(function(d){
-    var tv=(d.tipoVisita||'').toLowerCase();
-    return tv.indexOf('preventivo')===-1&&tv.indexOf('abono')===-1;
-  });
-  if(ivsMOdata.length===ivsMO.length){
-    // Primero intentar precio_aprobado (guardado por Ali al aprobar)
-    var tieneAprobados=ivsMOdata.every(function(d){return d.precio_aprobado!==undefined;});
-    if(tieneAprobados){
-      mosPorIv=ivsMOdata.map(function(d){return parseFloat(d.precio_aprobado)||0;});
-      // Verificar que sumen el total correcto, si no ajustar el último
-      var sumaApr=mosPorIv.reduce(function(s,v){return s+v;},0);
-      if(sumaApr!==mo&&mosPorIv.length){mosPorIv[mosPorIv.length-1]+=mo-sumaApr;}
-    } else {
-      // Fallback: usar peso proporcional por ubicaciones
-      var refs=ivsMOdata.map(function(d){
-        if(d.moRef&&parseFloat(d.moRef)>0) return parseFloat(d.moRef);
-        var ubs=d.ubs||[];
-        return Math.max(1,ubs.reduce(function(s,u){return s+(parseInt(u.qty)||1);},0));
-      });
-      var totalRefs=refs.reduce(function(s,v){return s+v;},0);
-      if(totalRefs>0){
-        mosPorIv=refs.map(function(r){return Math.round(mo*(r/totalRefs));});
-        var suma=mosPorIv.reduce(function(s,v){return s+v;},0);
-        mosPorIv[mosPorIv.length-1]+=mo-suma;
-      }
-    }
-  }
+  // Calcular MO por intervención usando el mismo método que Ali
+  // Si tiene precio_aprobado lo usa, sino recalcula desde catálogo
+  var mosPorIv=calcMODesdeData(reg['MO_Data']||reg.MO_Data||'');
+  // Si el recálculo no da nada, usar Monto MO total en la primera intervención
   if(!mosPorIv.length||mosPorIv.every(function(v){return v===0;})){
-    // Dividir en partes iguales
-    var base=Math.floor(mo/Math.max(ivsMO.length,1));
-    var resto=mo-base*Math.max(ivsMO.length,1);
-    mosPorIv=ivsMO.map(function(_,i){return base+(i===0?resto:0);});
+    mosPorIv=ivsMO.map(function(_,i){return i===0?mo:0;});
+  }
+  // Ajustar para que la suma coincida con el total aprobado
+  var sumaCalc=mosPorIv.reduce(function(s,v){return s+v;},0);
+  if(sumaCalc>0&&sumaCalc!==mo&&mosPorIv.length){
+    var diff=mo-sumaCalc;
+    mosPorIv[mosPorIv.length-1]+=diff;
   }
 
   var moNeto=dMo>0?Math.round(mo*(1-dMo/100)):mo;
@@ -2096,6 +2071,164 @@ function showToast(msg){var t=document.getElementById('toast');t.textContent=msg
 // ══════════════════════════════════════════════════════════
 // CONSOLIDADOR DE PERÍODO
 // ══════════════════════════════════════════════════════════
+var preciosConf=[];
+var catsDin=[];
+var catalogoMods=[];
+
+// ══ FUNCIONES DE CÁLCULO MO (copiadas de Ali) ══
+function nnAli(s){return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();}
+var CATS_LABELS={lu:'Tomas y Luces',en:'Energía',bo:'Bombas',se:'Seguridad y Com.'};
+var condPctConfig={sucio:5,acceso:5,extra:5,altura:20};
+var 
+
+function getPrecioRef(catk,sc,ev,comp){
+  sc=sc||'';ev=ev||'';comp=comp||'';
+  // Buscar primero en Config_Categorias (catsDin) — tiene precio_mo por componente
+  if(catsDin&&catsDin.length){
+    var compLimpio=(comp||'').replace(/^otro:\s*/i,'').trim();
+    var match=catsDin.filter(function(r){
+      return nnAli(r.catk)===nnAli(catk)&&
+             nnAli(r.subcategoria)===nnAli(sc)&&
+             nnAli(r.evento)===nnAli(ev)&&
+             (nnAli(r.componente)===nnAli(compLimpio)||r.componente==='(cualquier componente)');
+    })[0];
+    if(match&&parseFloat(match.precio_mo)>0)return parseFloat(match.precio_mo);
+  }
+  if(!preciosConf.length)return 0;
+  sc=sc||'';ev=ev||'';comp=comp||'';  // proteger contra null
+  var l=CATS_LABELS[catk]||catk||'';
+  // Limpiar prefijo "Otro: " de componentes libres de Mario
+  comp=(comp||'').replace(/^otro:\s*/i,'').trim();
+  var lN=nnAli(l), scN=nnAli(sc), evN=nnAli(ev), compN=nnAli(comp);
+  var rows=preciosConf;
+  // 1. Exacto: cat+sc+ev+comp
+  var r=rows.filter(function(p){return nnAli(p.categoria)===lN&&nnAli(p.subcategoria)===scN&&nnAli(p.evento)===evN&&nnAli(p.componente)===compN;})[0];
+  if(r)return parseFloat(r.precio_mo)||0;
+  // 2. cat+sc+ev, comp flexible
+  var r2=rows.filter(function(p){if(nnAli(p.categoria)!==lN||nnAli(p.subcategoria)!==scN||nnAli(p.evento)!==evN)return false;var pc=nnAli(p.componente);return pc&&pc!=='(cualquier componente)'&&(pc.indexOf(compN)!==-1||compN.indexOf(pc)!==-1);})[0];
+  if(r2)return parseFloat(r2.precio_mo)||0;
+  // 3. Instalación nueva/Reparación/Revisión con (cualquier componente) → buscar Reemplazo mismo componente
+  var evNorm=evN;
+  var esEvLibre=['instalacion nueva','instalación nueva','reparacion','reparación','revision','revisión'].indexOf(evNorm)!==-1;
+  if(esEvLibre){
+    var reemplN=nnAli('Reemplazo');
+    var r3b=rows.filter(function(p){
+      if(nnAli(p.categoria)!==lN||nnAli(p.subcategoria)!==scN)return false;
+      if(nnAli(p.evento)!==reemplN)return false;
+      var pc=nnAli(p.componente);
+      return pc&&pc!=='(cualquier componente)'&&(pc===compN||pc.indexOf(compN)!==-1||compN.indexOf(pc)!==-1);
+    })[0];
+    if(r3b)return parseFloat(r3b.precio_mo)||0;
+  }
+  // 3b. Mismo componente en CUALQUIER evento de la misma cat+sc
+  var r3=rows.filter(function(p){if(nnAli(p.categoria)!==lN||nnAli(p.subcategoria)!==scN)return false;var pc=nnAli(p.componente);return pc&&pc!=='(cualquier componente)'&&(pc===compN||pc.indexOf(compN)!==-1||compN.indexOf(pc)!==-1);})[0];
+  if(r3)return parseFloat(r3.precio_mo)||0;
+  // 4. Mismo componente en CUALQUIER evento de la misma cat (sin importar sc)
+  var r4=rows.filter(function(p){if(nnAli(p.categoria)!==lN)return false;var pc=nnAli(p.componente);return pc&&pc!=='(cualquier componente)'&&(pc===compN||pc.indexOf(compN)!==-1||compN.indexOf(pc)!==-1);})[0];
+  if(r4)return parseFloat(r4.precio_mo)||0;
+  // 5. Fallback genérico: cat+sc+ev con (cualquier componente)
+  var r5=rows.filter(function(p){return nnAli(p.categoria)===lN&&nnAli(p.subcategoria)===scN&&nnAli(p.evento)===evN&&nnAli(p.componente||'').indexOf('cualquier')!==-1;})[0];
+  if(r5)return parseFloat(r5.precio_mo)||0;
+  // 6. Fallback genérico: cat+ev con (cualquier componente)
+  var r6=rows.filter(function(p){return nnAli(p.categoria)===lN&&nnAli(p.evento)===evN&&nnAli(p.componente||'').indexOf('cualquier')!==-1;})[0];
+  if(r6)return parseFloat(r6.precio_mo)||0;
+  return 0;
+}
+
+
+function getModRef(nombreMod){
+  if(catalogoMods.length){
+    var norm=nnAli(nombreMod).replace(/[^a-z0-9]/g,'');
+    var found=catalogoMods.filter(function(m){var mn=nnAli(m.Nombre||m.nombre||'').replace(/[^a-z0-9]/g,'');return mn===norm||mn.indexOf(norm)!==-1||norm.indexOf(mn)!==-1;})[0];
+    if(found&&found.precio_mo)return parseFloat(found.precio_mo)||0;
+  }
+  return 0;
+}
+
+
+function calcularMORef(ivData){
+  // ivData: {catk, sc, ev, comp, compItems, ubs, mods, conds, tipoVisita}
+  if(!ivData)return 0;
+  if((ivData.tipoVisita||'').toLowerCase().indexOf('preventivo')!==-1||(ivData.tipoVisita||'').toLowerCase().indexOf('abono')!==-1)return 0;
+  // Visita técnica — precio fijo desde Config_Precios
+  if(ivData.catk==='vt'){
+    var vtRow=preciosConf.filter(function(p){return nnAli(p.categoria||'').indexOf('visita')!==-1&&nnAli(p.componente||'').indexOf('visita')!==-1;})[0];
+    return vtRow?parseFloat(vtRow.precio_mo)||0:0;
+  }
+  // Para Seguridad y Com con compItems: sumar precio de cada componente
+  var base=0;
+  if(ivData.compItems&&ivData.compItems.length>0){
+    base=ivData.compItems.reduce(function(s,x){
+      var precioComp=getPrecioRef(ivData.catk,ivData.sc,ivData.ev,x.nombre);
+      if(!precioComp)precioComp=getPrecioRef(ivData.catk,ivData.sc,'Reemplazo',x.nombre);
+      var qty=x.qty||1;
+      var xLow=(x.nombre||'').toLowerCase();
+      if(xLow.indexOf('cable utp')!==-1){
+        var bocasX=Math.ceil(qty/5);
+        return s+precioComp*bocasX;
+      }
+      return s+precioComp*qty;
+    },0);
+  } else {
+    // Detectar multiplicador en comp: "6x Panel o Plafon" → qty=6, comp="Panel o Plafon"
+    var compRaw=ivData.comp||'';
+    var compQty=1;
+    var compMatch=compRaw.match(/^(\d+)x\s+(.+)$/i);
+    if(compMatch){compQty=parseInt(compMatch[1])||1;compRaw=compMatch[2].trim();}
+    // Limpiar prefijo "Otro: " que agrega Mario en componentes libres
+    compRaw=compRaw.replace(/^otro:\s*/i,'').trim();
+    base=getPrecioRef(ivData.catk,ivData.sc,ivData.ev,compRaw);
+    if(!base&&ivData.catk==='se'){
+      base=getPrecioRef(ivData.catk,ivData.sc,'Reemplazo',compRaw);
+    }
+    // Fallback cross-categoría: buscar en toda la tabla si no encontró nada
+    if(!base){
+      var compN=nnAli(compRaw);
+      var rfallback=preciosConf.filter(function(p){
+        var pc=nnAli(p.componente||'');
+        return pc&&pc!=='(cualquier componente)'&&(pc===compN||pc.indexOf(compN)!==-1||compN.indexOf(pc)!==-1);
+      })[0];
+      if(rfallback)base=parseFloat(rfallback.precio_mo)||0;
+    }
+    // Multiplicar por cantidad de componentes
+    if(compQty>1)base=base*compQty;
+    // Componentes por metro en Tomas e Iluminación
+    if(ivData.ledMetros){
+      base=base*(parseFloat(ivData.ledMetros)||1);
+    }
+  }
+  // NO multiplicar por ubicaciones — la cantidad va en el componente (Nx)
+  var total=Math.round(base);
+  // Modificadores
+  (ivData.mods||[]).forEach(function(mod){
+    var precio=getModRef(mod.nombre);
+    var val=parseFloat(mod.val)||1;
+    var curvas=parseInt(mod.curvas)||0;
+    if((mod.unidad||'u')==='m'){
+      var bocas=val<=5?1:val<=10?2:val<=15?3:val<=20?4:Math.ceil(val/5);
+      bocas+=Math.floor(curvas/3);
+      total+=Math.round(bocas*precio);
+    } else {
+      total+=Math.round((Math.round(val)||1)*precio);
+    }
+  });
+  // Condiciones especiales
+  var mult=1;
+  (ivData.conds||[]).forEach(function(c){if(condPctConfig[c])mult+=condPctConfig[c]/100;});
+  if(mult>1)total=Math.round(total*mult);
+  return total;
+}
+
+function calcMODesdeData(moDataStr){
+  var moData=[];try{moData=JSON.parse(moDataStr||'[]');}catch(e){}
+  return moData.map(function(iv){
+    // Si ya tiene precio_aprobado guardado, usarlo
+    if(iv.precio_aprobado!==undefined) return parseFloat(iv.precio_aprobado)||0;
+    // Si no, recalcular desde catálogo
+    return calcularMORef(iv);
+  });
+}
+
 var cState={registros:[],edificios:[],catalogo:[],desde:'',hasta:'',seleccionados:{}};
 function cHoy(){return new Date().toISOString().split('T')[0];}
 function initConsolidar(){if(!document.getElementById('cDesde').value){var h=new Date();document.getElementById('cDesde').value=new Date(h.getFullYear(),h.getMonth(),1).toISOString().split('T')[0];document.getElementById('cHasta').value=cHoy();}document.getElementById('consol-paso1').style.display='block';document.getElementById('consol-paso2').style.display='none';document.getElementById('consol-paso3').style.display='none';}
@@ -2103,7 +2236,7 @@ function cSetAtajo(t){var h=new Date(),d,u=cHoy();if(t==='mes'){d=new Date(h.get
 function cFmtPeso(n){if(!n||isNaN(n))return '0';return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
 function cGetPrecio(nom){if(!nom)return 0;var low=nom.toLowerCase().trim();var f=cState.catalogo.find(function(m){return(m.Nombre||m.nombre||'').toLowerCase().trim()===low;});if(!f)f=cState.catalogo.find(function(m){var n=(m.Nombre||m.nombre||'').toLowerCase().trim();return n.includes(low)||low.includes(n);});return f?(parseFloat(f['Precio Unitario']||f.Precio||f.precio||0)||0):0;}
 function cLimpiarMO(texto){if(!texto)return '';var partes=texto.split('||').map(function(p){return p.trim();}).filter(Boolean);var lineas=[];partes.forEach(function(p){var idx=p.indexOf('MATERIALES:');if(idx!==-1)p=p.substring(0,idx).trim();p=p.replace(/\s+$/,'').replace(/·\s*$/,'').trim();if(!p)return;p=p.replace(/^\d+\.\s*/,'');var c=p.split(' · ');if(c.length>=3)c=c.slice(2);while(c.length&&!c[0].trim())c.shift();while(c.length&&!c[c.length-1].trim())c.pop();var l=c.join(' · ').trim();if(l)lineas.push(l);});return lineas.join('\n');}
-async function cBuscar(){var desde=document.getElementById('cDesde').value,hasta=document.getElementById('cHasta').value;if(!desde||!hasta){showToast('Elegí las fechas');return;}cState.desde=desde;cState.hasta=hasta;var btn=document.getElementById('cBtnBuscar');btn.textContent='Cargando...';btn.disabled=true;try{var[rE,rR,rC]=await Promise.all([fetch(API+'?sheet=Edificios').then(r=>r.json()),fetch(API+'?sheet=Registros').then(r=>r.json()),fetch(API+'?sheet=Catalogo_Materiales').then(r=>r.json())]);cState.edificios=Array.isArray(rE)?rE:[];cState.catalogo=Array.isArray(rC)?rC:[];var ab=new Set(cState.edificios.filter(function(e){return String(e.Abonado||'').toLowerCase()==='si';}).map(function(e){return e.Nombre;}));cState.registros=(Array.isArray(rR)?rR:[]).filter(function(r){if(!r.Fecha)return false;var f=String(r.Fecha).split('T')[0];var est=String(r.Estado||'').toLowerCase();return f>=desde&&f<=hasta&&ab.has(r.Edificio)&&(est==='aprobado'||est==='facturado');});cState.seleccionados={};cState.registros.forEach(function(r,i){if(!cState.seleccionados[r.Edificio])cState.seleccionados[r.Edificio]=new Set();cState.seleccionados[r.Edificio].add(i);});cRenderPaso2();document.getElementById('consol-paso1').style.display='none';document.getElementById('consol-paso2').style.display='block';}catch(e){showToast('Error al cargar datos');}finally{btn.textContent='Buscar registros del período';btn.disabled=false;}}
+async function cBuscar(){var desde=document.getElementById('cDesde').value,hasta=document.getElementById('cHasta').value;if(!desde||!hasta){showToast('Elegí las fechas');return;}cState.desde=desde;cState.hasta=hasta;var btn=document.getElementById('cBtnBuscar');btn.textContent='Cargando...';btn.disabled=true;try{var[rE,rR2,rC,rPC,rCC,rMods2]=await Promise.all([fetch(API+'?sheet=Edificios').then(r=>r.json()),fetch(API+'?sheet=Registros').then(r=>r.json()),fetch(API+'?sheet=Catalogo_Materiales').then(r=>r.json()),fetch(API+'?sheet=Config_Precios&limit=500').then(r=>r.json()),fetch(API+'?sheet=Config_Categorias&limit=500').then(r=>r.json()),fetch(API+'?sheet=Modificadores').then(r=>r.json())]);cState.edificios=Array.isArray(rE)?rE:[];var rR=rR2;cState.catalogo=Array.isArray(rC)?rC:[];preciosConf=Array.isArray(rPC)?rPC:[];catsDin=Array.isArray(rCC)?rCC:[];catalogoMods=Array.isArray(rMods2)?rMods2:[];var ab=new Set(cState.edificios.filter(function(e){return String(e.Abonado||'').toLowerCase()==='si';}).map(function(e){return e.Nombre;}));cState.registros=(Array.isArray(rR)?rR:[]).filter(function(r){if(!r.Fecha)return false;var f=String(r.Fecha).split('T')[0];var est=String(r.Estado||'').toLowerCase();return f>=desde&&f<=hasta&&ab.has(r.Edificio)&&(est==='aprobado'||est==='facturado');});cState.seleccionados={};cState.registros.forEach(function(r,i){if(!cState.seleccionados[r.Edificio])cState.seleccionados[r.Edificio]=new Set();cState.seleccionados[r.Edificio].add(i);});cRenderPaso2();document.getElementById('consol-paso1').style.display='none';document.getElementById('consol-paso2').style.display='block';}catch(e){showToast('Error al cargar datos');}finally{btn.textContent='Buscar registros del período';btn.disabled=false;}}
 function cRenderPaso2(){var desde=cState.desde.split('-').reverse().join('/'),hasta=cState.hasta.split('-').reverse().join('/');document.getElementById('cPeriodoLabel').textContent=desde+' → '+hasta;var porEdif={};cState.registros.forEach(function(r,i){if(!porEdif[r.Edificio])porEdif[r.Edificio]=[];porEdif[r.Edificio].push({r:r,i:i});});var lista=document.getElementById('cListaEdif');lista.innerHTML='';if(Object.keys(porEdif).length===0){lista.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3);font-size:14px;font-weight:600">Sin registros aprobados en ese período</div>';cActualizarContador();return;}Object.keys(porEdif).sort().forEach(function(edif){var regs=porEdif[edif],ek=edif.replace(/[\s\/]/g,'_');var card=document.createElement('div');card.style.cssText='background:var(--s1);border:1px solid var(--borde);border-radius:10px;overflow:hidden';var hdr=document.createElement('div');hdr.style.cssText='background:var(--s2);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border-left:4px solid var(--verde)';hdr.id='chdr-'+ek;hdr.innerHTML='<div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;letter-spacing:1.5px;color:var(--t)">'+edif+'</div><div style="font-size:11px;color:var(--t3);font-weight:600" id="ccnt-'+ek+'">'+regs.length+' seleccionados</div></div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:28px;color:var(--am)" id="cnum-'+ek+'">'+regs.length+'</div>';hdr.onclick=function(){cToggleEdif(ek);};var rl=document.createElement('div');rl.id='cregs-'+ek;regs.forEach(function(item){var r=item.r,i=item.i;var row=document.createElement('div');row.style.cssText='display:flex;align-items:flex-start;gap:12px;padding:10px 16px;border-top:1px solid rgba(74,82,120,.3);cursor:pointer';row.onclick=function(){cToggleReg(edif,i,ek);};var chk=document.createElement('div');chk.id='cchk-'+i;chk.style.cssText='width:22px;height:22px;border-radius:6px;border:2px solid var(--verde);background:var(--verde);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px';chk.innerHTML='<span style="color:#000;font-size:13px;font-weight:900">✓</span>';var info=document.createElement('div');info.style.cssText='flex:1';var fecha=String(r.Fecha||'').split('T')[0].split('-').reverse().join('/');var hora=r.Hora?String(r.Hora).substring(0,5)+'hs':'';var horaf=r['Hora Fin']?' → '+String(r['Hora Fin']).substring(0,5)+'hs':'';var mo=r['Monto MO']?'$'+cFmtPeso(parseFloat(r['Monto MO'])||0)+' MO':'';var mats=r['Monto Materiales']?'$'+cFmtPeso(parseFloat(r['Monto Materiales'])||0)+' mats':'';info.innerHTML='<div style="font-size:13px;font-weight:800;color:var(--am)">'+fecha+(hora?' · '+hora+horaf:'')+'</div><div style="font-size:12px;color:var(--t3);font-weight:600;margin-top:2px">'+ [mo,mats].filter(Boolean).join(' · ')+'</div>';row.appendChild(chk);row.appendChild(info);rl.appendChild(row);});card.appendChild(hdr);card.appendChild(rl);lista.appendChild(card);});cActualizarContador();}
 function cToggleEdif(ek){var l=document.getElementById('cregs-'+ek);if(l)l.style.display=l.style.display==='none'?'':'none';}
 function cToggleReg(edif,i,ek){var set=cState.seleccionados[edif];if(!set){cState.seleccionados[edif]=new Set();set=cState.seleccionados[edif];}var chk=document.getElementById('cchk-'+i);if(set.has(i)){set.delete(i);if(chk){chk.style.borderColor='var(--borde)';chk.style.background='transparent';chk.innerHTML='';}}else{set.add(i);if(chk){chk.style.borderColor='var(--verde)';chk.style.background='var(--verde)';chk.innerHTML='<span style="color:#000;font-size:13px;font-weight:900">✓</span>';}}cActualizarContador();var total=cState.registros.filter(function(r){return r.Edificio===edif;}).length;var hdr=document.getElementById('chdr-'+ek);if(hdr)hdr.style.borderLeftColor=set.size===total?'var(--verde)':set.size>0?'var(--am)':'var(--borde)';var cnt=document.getElementById('ccnt-'+ek);if(cnt)cnt.textContent=set.size+'/'+total+' seleccionados';var num=document.getElementById('cnum-'+ek);if(num)num.textContent=set.size;}
@@ -2286,6 +2419,9 @@ async function ckBuscar(){
     if(ckState.ckItems.length===0){
       var rE=await fetch(API+'?sheet=Edificios').then(r=>r.json());
       ckState.edificios=Array.isArray(rE)?rE:[];
+    preciosConf=Array.isArray(rPC)?rPC:[];
+    catsDin=Array.isArray(rCC)?rCC:[];
+    catalogoMods=Array.isArray(rMods)?rMods:[];
       ckState.registros=[];
       showToast('No hay consolidado para ese período. Mostrando abonos base.');
     } else {
