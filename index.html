@@ -331,6 +331,71 @@ body{background:var(--bg);color:var(--t);font-family:'DM Sans',sans-serif;min-he
   .content { padding: 0 !important; }
   #ckitem-ab0, #ckitem-mat0, #ckitem-tr0 { border-color: #ccc !important; }
 }
+
+:root{--bg:#0f1015;--s1:#161820;--s2:#1e2130;--s3:#272b40;--borde:#4a5278;--am:#f5c518;--verde:#00c896;--rojo:#ff4757;--azul:#4a9eff;--naranja:#ff8c42;--t:#fff;--t2:#dde4ff;--t3:#9aa5c8;--r:12px;--rs:8px;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--t);font-family:'Barlow',sans-serif;font-size:15px;max-width:430px;margin:0 auto;min-height:100vh}
+.pant{display:none;flex-direction:column;min-height:100vh}
+.pant.on{display:flex}
+.hdr{background:var(--s1);border-bottom:3px solid var(--am);padding:12px 16px;position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:10px}
+.btn-v{background:var(--s2);border:1px solid var(--borde);border-radius:var(--rs);padding:8px 14px;font-size:13px;font-weight:800;color:var(--t3);cursor:pointer;flex-shrink:0}
+.htit{font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:2px;color:var(--am);flex:1}
+.hsub{font-size:10px;color:var(--t3);font-weight:600;margin-top:1px}
+.scroll{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:11px;padding-bottom:40px}
+.card{background:var(--s1);border:1px solid var(--borde);border-radius:var(--r);overflow:hidden}
+.chdr{background:linear-gradient(135deg,#1e1d10,var(--s1));border-bottom:1px solid rgba(245,197,24,.3);padding:13px 16px}
+.cnombre{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--am)}
+.cmeta{font-size:11px;color:var(--t3);font-weight:600;margin-top:2px}
+.blq{padding:12px 16px;border-top:1px solid rgba(74,82,120,.3)}
+.blq-lbl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:6px}
+.box{background:var(--s2);border:1px solid var(--borde);border-radius:var(--rs);padding:12px 14px;font-size:13px;color:var(--t2);line-height:1.6;font-family:'Barlow',sans-serif;font-weight:600;white-space:pre-wrap;word-break:break-word}
+.cha-ok{font-size:11px;font-weight:800;border-radius:20px;padding:3px 8px;background:rgba(0,200,150,.12);color:var(--verde);border:1px solid rgba(0,200,150,.3);flex-shrink:0}
+.cha-warn{font-size:11px;font-weight:800;border-radius:20px;padding:3px 8px;background:rgba(255,165,0,.12);color:orange;border:1px solid rgba(255,165,0,.3);flex-shrink:0}
+.cha-over{font-size:11px;font-weight:800;border-radius:20px;padding:3px 8px;background:rgba(255,71,87,.12);color:var(--rojo);border:1px solid rgba(255,71,87,.3);flex-shrink:0}
+.bcop{background:rgba(74,158,255,.12);border:1px solid rgba(74,158,255,.3);border-radius:20px;padding:5px 14px;font-size:11px;font-weight:800;color:var(--azul);cursor:pointer;flex-shrink:0}
+.bcop.ok{background:rgba(0,200,150,.12);border-color:rgba(0,200,150,.3);color:var(--verde)}
+.bfact{width:100%;background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.3);border-radius:var(--rs);padding:13px;font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:1.5px;color:var(--rojo);cursor:pointer;text-align:center;transition:all .2s}
+.bfact.done{background:rgba(0,200,150,.15);border-color:rgba(0,200,150,.4);color:var(--verde)}
+.npdf{background:var(--s3);border:1px dashed rgba(245,197,24,.4);border-radius:var(--rs);padding:10px 14px;font-size:13px;font-weight:700;color:var(--am);display:flex;align-items:center;justify-content:space-between;gap:8px;word-break:break-all}
+.cbox{background:rgba(245,197,24,.08);border:1px solid rgba(245,197,24,.3);border-radius:var(--rs);padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+.cnum{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:3px;color:var(--am)}
+.mrow{display:flex;align-items:center;gap:8px;margin-top:8px}
+.mnum{font-family:'Bebas Neue',sans-serif;font-size:21px;color:var(--am)}
+.ftbar{display:flex;border-top:1px solid var(--borde)}
+.fti{flex:1;text-align:center;padding:10px;border-right:1px solid var(--borde)}
+.fti:last-child{border-right:none}
+.ftn{font-family:'Bebas Neue',sans-serif;font-size:19px;color:var(--am)}
+.ftl{font-size:9px;font-weight:800;text-transform:uppercase;color:var(--t3)}
+/* Selector periodo */
+input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);border-radius:var(--rs);padding:13px;font-size:15px;font-weight:700;color:var(--t);outline:none;font-family:'Barlow',sans-serif}
+.atajo{background:var(--s3);border:1px solid var(--borde);border-radius:20px;padding:7px 14px;font-size:12px;font-weight:800;color:var(--t3);cursor:pointer;display:inline-block}
+.btn-am{width:100%;background:var(--am);border:none;border-radius:var(--r);padding:15px;font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:2px;color:#000;cursor:pointer;font-weight:900}
+.btn-verde{width:100%;background:var(--verde);border:none;border-radius:var(--r);padding:15px;font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:2px;color:#000;cursor:pointer;font-weight:900}
+/* Reg row selector */
+.reg-row{display:flex;align-items:flex-start;gap:11px;padding:10px 16px;border-top:1px solid rgba(74,82,120,.3);cursor:pointer}
+.reg-chk{width:22px;height:22px;border-radius:6px;border:2px solid var(--verde);background:var(--verde);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;transition:all .15s}
+.reg-chk.off{background:transparent;border-color:var(--borde)}
+.reg-info{flex:1}
+.reg-fecha{font-size:13px;font-weight:800;color:var(--am)}
+.reg-detalle{font-size:12px;color:var(--t3);font-weight:600;margin-top:2px}
+/* Checklist */
+.ck-stit{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;margin:14px 0 8px;display:flex;align-items:center;gap:8px}
+.ck-badge{border-radius:20px;padding:2px 10px;font-size:10px}
+.cki{background:var(--s1);border:1px solid var(--borde);border-left:4px solid;border-radius:var(--rs);padding:11px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .15s;margin-bottom:5px}
+.cki.tachado{opacity:.35}
+.cki.tachado .cki-nom{text-decoration:line-through}
+.cki-chk{width:22px;height:22px;border-radius:6px;border:2px solid;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.cki-nom{font-size:13px;font-weight:800;color:var(--t);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.cki-sub{font-size:11px;color:var(--t3);margin-top:1px}
+.cki-monto{font-family:'Bebas Neue',sans-serif;font-size:15px;flex-shrink:0}
+/* Resumen */
+.resumen{background:var(--s2);border:1px solid rgba(0,200,150,.3);border-radius:10px;padding:12px;display:flex;text-align:center;margin-bottom:4px}
+.ri{flex:1;border-right:1px solid var(--borde)}
+.ri:last-child{border-right:none}
+.rn{font-family:'Bebas Neue',sans-serif;font-size:22px}
+.rl{font-size:9px;font-weight:800;text-transform:uppercase;color:var(--t3)}
+.rm{font-size:11px;font-weight:800;margin-top:2px}
+
 </style>
 </head>
 <body>
@@ -373,7 +438,7 @@ body{background:var(--bg);color:var(--t);font-family:'DM Sans',sans-serif;min-he
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.12</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.13</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -528,74 +593,81 @@ body{background:var(--bg);color:var(--t);font-family:'DM Sans',sans-serif;min-he
     <div id="demoGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;"></div>
   </div>
 
-  <!-- CONSOLIDAR PERÍODO -->
+  <!-- CONSOLIDAR PERÍODO v4 -->
   <div class="content" id="secConsolidar" style="display:none">
-
-    <!-- PASO 1: SELECTOR -->
-    <div id="consol-paso1">
-      <div style="background:var(--s2);border:1px solid var(--borde);border-left:4px solid var(--am);border-radius:12px;padding:16px 18px;margin-bottom:16px">
-        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--am);margin-bottom:4px">Consolidar período</div>
-        <div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:2px;color:var(--t)">Elegí el período a facturar</div>
-        <div style="font-size:13px;color:var(--t3);font-weight:600;margin-top:3px">Solo registros aprobados por Ali · edificios abonados</div>
-      </div>
-
-      <div style="display:flex;gap:12px;margin-bottom:12px">
-        <div style="flex:1">
-          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:5px">Desde</div>
-          <input type="date" id="cDesde" style="width:100%;background:var(--s2);border:1px solid var(--borde);border-radius:8px;padding:12px;font-size:15px;font-weight:700;color:var(--t);outline:none">
-        </div>
-        <div style="flex:1">
-          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:5px">Hasta</div>
-          <input type="date" id="cHasta" style="width:100%;background:var(--s2);border:1px solid var(--borde);border-radius:8px;padding:12px;font-size:15px;font-weight:700;color:var(--t);outline:none">
-        </div>
-      </div>
-
-      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-        <div onclick="cSetAtajo('mes')" style="background:var(--s3);border:1px solid var(--borde);border-radius:20px;padding:7px 14px;font-size:12px;font-weight:800;color:var(--t3);cursor:pointer">Este mes</div>
-        <div onclick="cSetAtajo('15')" style="background:var(--s3);border:1px solid var(--borde);border-radius:20px;padding:7px 14px;font-size:12px;font-weight:800;color:var(--t3);cursor:pointer">Ciclo 15→15</div>
-        <div onclick="cSetAtajo('30')" style="background:var(--s3);border:1px solid var(--borde);border-radius:20px;padding:7px 14px;font-size:12px;font-weight:800;color:var(--t3);cursor:pointer">Últimos 30 días</div>
-      </div>
-
-      <button id="cBtnBuscar" onclick="cBuscar()" style="width:100%;background:var(--am);border:none;border-radius:10px;padding:15px;font-family:\'Bebas Neue\',sans-serif;font-size:18px;letter-spacing:2px;color:#000;cursor:pointer">
-        Buscar registros del período
-      </button>
+    <div style="position:relative;min-height:100vh">
+<!-- ══ P1: SELECTOR PERÍODO ══ -->
+<div class="pant on" id="p1">
+  <div class="hdr"><div><div class="htit">Consolidador AFIP</div><div class="hsub">SOLEC · Panel Ciro</div></div></div>
+  <div class="scroll">
+    <div style="background:var(--s2);border:1px solid var(--borde);border-left:4px solid var(--am);border-radius:var(--r);padding:14px 16px">
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--am);margin-bottom:3px">Paso 1 de 2</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--t)">Elegí el período</div>
+      <div style="font-size:13px;color:var(--t3);font-weight:600;margin-top:3px">Solo carga registros Aprobados · Los Facturados no aparecen</div>
     </div>
-
-    <!-- PASO 2: SELECCIÓN -->
-    <div id="consol-paso2" style="display:none">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div>
-          <div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;letter-spacing:2px;color:var(--am)">Seleccioná registros</div>
-          <div style="font-size:12px;color:var(--t3);font-weight:600" id="cPeriodoLabel">—</div>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <div style="font-family:\'Bebas Neue\',sans-serif;font-size:24px;color:var(--am)" id="cSelCount">0</div>
-          <div style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase">sel.</div>
-        </div>
+    <div style="display:flex;gap:10px">
+      <div style="flex:1">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:5px">Desde</div>
+        <input type="date" id="inp-desde">
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:12px">
-        <div onclick="cSelTodos(true)" style="flex:1;background:rgba(0,200,150,.1);border:1px solid rgba(0,200,150,.3);border-radius:8px;padding:9px;text-align:center;font-family:\'Bebas Neue\',sans-serif;font-size:14px;letter-spacing:1px;color:var(--verde);cursor:pointer">✓ Todos</div>
-        <div onclick="cSelTodos(false)" style="flex:1;background:rgba(255,71,87,.06);border:1px solid rgba(255,71,87,.2);border-radius:8px;padding:9px;text-align:center;font-family:\'Bebas Neue\',sans-serif;font-size:14px;letter-spacing:1px;color:var(--rojo);cursor:pointer">✕ Ninguno</div>
-        <div onclick="cVolver1()" style="background:var(--s3);border:1px solid var(--borde);border-radius:8px;padding:9px 14px;font-size:13px;font-weight:800;color:var(--t3);cursor:pointer">← Volver</div>
+      <div style="flex:1">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:5px">Hasta</div>
+        <input type="date" id="inp-hasta">
       </div>
-      <div id="cListaEdif" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px"></div>
-      <button onclick="cGenerar()" style="width:100%;background:var(--am);border:none;border-radius:10px;padding:15px;font-family:\'Bebas Neue\',sans-serif;font-size:18px;letter-spacing:2px;color:#000;cursor:pointer">
-        Generar consolidado →
-      </button>
     </div>
-
-    <!-- PASO 3: CONSOLIDADO -->
-    <div id="consol-paso3" style="display:none">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <div>
-          <div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;letter-spacing:2px;color:var(--am)">Consolidado</div>
-          <div style="font-size:12px;color:var(--t3);font-weight:600" id="cConsolLabel">—</div>
-        </div>
-        <div onclick="cVolver2()" style="background:var(--s3);border:1px solid var(--borde);border-radius:8px;padding:9px 14px;font-size:13px;font-weight:800;color:var(--t3);cursor:pointer">← Volver</div>
-      </div>
-      <div id="cConsolBody" style="display:flex;flex-direction:column;gap:14px"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div class="atajo" onclick="setAtajo('mes')">Este mes</div>
+      <div class="atajo" onclick="setAtajo('15')">Ciclo 15→15</div>
+      <div class="atajo" onclick="setAtajo('30')">Últimos 30 días</div>
     </div>
+    <button class="btn-am" onclick="irP2()">Buscar registros →</button>
+  </div>
+</div>
 
+<!-- ══ P2: SELECTOR REGISTROS ══ -->
+<div class="pant" id="p2">
+  <div class="hdr">
+    <div class="btn-v" onclick="ir('p1')">← Volver</div>
+    <div style="flex:1">
+      <div class="htit">Seleccioná registros</div>
+      <div class="hsub" id="p2-periodo">—</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--am)" id="p2-cnt">0</div>
+      <div style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase">sel.</div>
+    </div>
+  </div>
+  <div class="scroll" style="padding-bottom:90px" id="p2-body"></div>
+  <div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--s1);border-top:2px solid var(--borde);padding:12px 16px;z-index:200">
+    <button class="btn-verde" onclick="generarChecklist()">Generar checklist →</button>
+  </div>
+</div>
+
+<!-- ══ P3: CHECKLIST ══ -->
+<div class="pant" id="p3">
+  <div class="hdr">
+    <div class="btn-v" onclick="ir('p2')">← Volver</div>
+    <div style="flex:1">
+      <div class="htit">✅ Checklist</div>
+      <div class="hsub" id="p3-periodo">—</div>
+    </div>
+    <div onclick="window.print()" style="background:var(--azul);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:800;color:#fff;cursor:pointer">🖨️</div>
+  </div>
+  <div class="scroll" id="p3-body"></div>
+</div>
+
+<!-- ══ P4: FACTURACIÓN ══ -->
+<div class="pant" id="p4">
+  <div class="hdr">
+    <div class="btn-v" onclick="ir('p3')">← Checklist</div>
+    <div style="flex:1">
+      <div class="htit" id="p4-titulo">—</div>
+      <div class="hsub" id="p4-sub">—</div>
+    </div>
+  </div>
+  <div class="scroll" id="p4-body"></div>
+</div>
+    </div>
   </div>
 
   <!-- CHECKLIST DE FACTURACIÓN -->
@@ -2231,7 +2303,37 @@ function calcMODesdeData(moDataStr){
 
 var cState={registros:[],edificios:[],catalogo:[],desde:'',hasta:'',seleccionados:{}};
 function cHoy(){return new Date().toISOString().split('T')[0];}
-function initConsolidar(){if(!document.getElementById('cDesde').value){var h=new Date();document.getElementById('cDesde').value=new Date(h.getFullYear(),h.getMonth(),1).toISOString().split('T')[0];document.getElementById('cHasta').value=cHoy();}document.getElementById('consol-paso1').style.display='block';document.getElementById('consol-paso2').style.display='none';document.getElementById('consol-paso3').style.display='none';}
+async function initConsolidar(){
+  // Load data if not loaded yet
+  if(!cState.edificios||!cState.edificios.length){
+    try{
+      var[rE,rR,rPC,rCC,rMods]=await Promise.all([
+        fetch(API+'?sheet=Edificios').then(r=>r.json()),
+        fetch(API+'?sheet=Registros').then(r=>r.json()),
+        fetch(API+'?sheet=Config_Precios&limit=500').then(r=>r.json()),
+        fetch(API+'?sheet=Config_Categorias&limit=500').then(r=>r.json()),
+        fetch(API+'?sheet=Modificadores').then(r=>r.json())
+      ]);
+      cState.edificios=Array.isArray(rE)?rE:[];
+      cState.todosRegs=(Array.isArray(rR)?rR:[]).filter(function(r){
+        var est=String(r.Estado||'').toLowerCase();
+        return est==='aprobado'||est==='facturado';
+      });
+      preciosConf=Array.isArray(rPC)?rPC:[];
+      catsDin=Array.isArray(rCC)?rCC:[];
+      catalogoMods=Array.isArray(rMods)?rMods:[];
+    }catch(e){showToast('Error al cargar datos');}
+  }
+  // Set default dates
+  if(!document.getElementById('inp-desde').value){
+    var h=new Date();
+    document.getElementById('inp-desde').value=new Date(h.getFullYear(),h.getMonth()-1,15).toISOString().split('T')[0];
+    document.getElementById('inp-hasta').value=new Date().toISOString().split('T')[0];
+  }
+  // Show first screen
+  ir('p1');
+}
+function initConsolidar_OLD(){if(!document.getElementById('cDesde').value){var h=new Date();document.getElementById('cDesde').value=new Date(h.getFullYear(),h.getMonth(),1).toISOString().split('T')[0];document.getElementById('cHasta').value=cHoy();}document.getElementById('consol-paso1').style.display='block';document.getElementById('consol-paso2').style.display='none';document.getElementById('consol-paso3').style.display='none';}
 function cSetAtajo(t){var h=new Date(),d,u=cHoy();if(t==='mes'){d=new Date(h.getFullYear(),h.getMonth(),1).toISOString().split('T')[0];}else if(t==='15'){d=new Date(h.getFullYear(),h.getMonth()-1,15).toISOString().split('T')[0];u=new Date(h.getFullYear(),h.getMonth(),15).toISOString().split('T')[0];}else{var x=new Date(h);x.setDate(x.getDate()-30);d=x.toISOString().split('T')[0];}document.getElementById('cDesde').value=d;document.getElementById('cHasta').value=u;}
 function cFmtPeso(n){if(!n||isNaN(n))return '0';return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
 function cGetPrecio(nom){if(!nom)return 0;var low=nom.toLowerCase().trim();var f=cState.catalogo.find(function(m){return(m.Nombre||m.nombre||'').toLowerCase().trim()===low;});if(!f)f=cState.catalogo.find(function(m){var n=(m.Nombre||m.nombre||'').toLowerCase().trim();return n.includes(low)||low.includes(n);});return f?(parseFloat(f['Precio Unitario']||f.Precio||f.precio||0)||0):0;}
@@ -2526,6 +2628,474 @@ function ckGuardarEstado(id,facturado){
     items.forEach(function(item){if(item.ID===id)item.Estado=facturado?'Facturado':'Pendiente';});
     sessionStorage.setItem(key,JSON.stringify(items));
   }catch(e){console.error('Error guardando estado:',e);}
+}
+
+
+
+var fmt=function(n){return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');};
+var facturados={};
+var CK={abonos:[],mats:[],parts:[]};
+var sel={}; // edificio -> Set de indices
+var REGS=[];
+var EDIFS=[];
+var DESDE='',HASTA='';
+
+// ── DATOS DEMO ──
+var EDIFS_DEMO_UNUSED=[
+  {Nombre:'Alfil I',Abonado:'Si',Administración:'Ramírez Fuentes','Precio Abono':7337,Indice:9,CUIT:'30-71234561-1'},
+  {Nombre:'Zena',Abonado:'Si',Administración:'Ramírez Fuentes','Precio Abono':7337,Indice:9,CUIT:'30-71234567-9'},
+  {Nombre:'Torre del Sol',Abonado:'Si',Administración:'Ramírez Fuentes','Precio Abono':7337,Indice:16,CUIT:'30-71234565-5'},
+  {Nombre:'Argos I',Abonado:'Si',Administración:'Ramírez Fuentes','Precio Abono':7337,Indice:12,CUIT:'30-71234563-3'},
+  {Nombre:'Torres MDP',Abonado:'No',Administración:'Particular',CUIT:'30-71234570-0'},
+  {Nombre:'Neptuno XXII',Abonado:'No',Administración:'Particular',CUIT:'30-71234571-1'},
+];
+
+var REGS_DEMO_UNUSED=[
+  {Edificio:'Zena',Fecha:'2026-04-29',Hora:'10:20',HoraFin:'11:35',TipoVisita:'Preventivo/Abono',Estado:'Aprobado',
+   Intervenciones:'1. Tomas e Iluminación · Tomas e Iluminación · Reemplazo · Lámpara · Hall PB || 2. Tomas e Iluminación · Tomas e Iluminación · Reemplazo · Lámpara · Escalera 1º',
+   MateriasExtra:'[{"nombre":"Lámpara 9W frío LEDVANCE","qty":2,"un":"u","precio":1075}]','Monto MO':0,'Monto Materiales':2150},
+  {Edificio:'Zena',Fecha:'2026-05-04',Hora:'12:00',HoraFin:'14:35',TipoVisita:'Preventivo/Abono',Estado:'Aprobado',
+   Intervenciones:'1. Tomas e Iluminación · Tomas e Iluminación · Reemplazo · Fotocélula · Farola vereda || 2. Tomas e Iluminación · Control de Luz · Reparación · Tomacorriente · Cochera PB · "No conectaba, se reemplaza módulo"',
+   MateriasExtra:'[{"nombre":"Fotocélula KALOP común","qty":1,"un":"u","precio":2850},{"nombre":"Fijaciones","qty":4,"un":"u","precio":120}]','Monto MO':0,'Monto Materiales':3330},
+  {Edificio:'Alfil I',Fecha:'2026-04-21',Hora:'09:00',HoraFin:'10:30',TipoVisita:'Preventivo/Abono',Estado:'Aprobado',
+   Intervenciones:'1. Tomas e Iluminación · Tomas e Iluminación · Reemplazo · Lámpara · Pasillo PB || 2. Tomas e Iluminación · Tomas e Iluminación · Reemplazo · Lámpara · Pasillo 1º || 3. Tomas e Iluminación · Tomas e Iluminación · Reemplazo · Lámpara · Pasillo 2º',
+   MateriasExtra:'[{"nombre":"Lámpara 9W cálido LEDVANCE","qty":3,"un":"u","precio":1075}]','Monto MO':0,'Monto Materiales':3225},
+  {Edificio:'Torres MDP',Fecha:'2026-04-26',Hora:'08:00',HoraFin:'17:00',TipoVisita:'Service',Estado:'Aprobado',
+   Intervenciones:'1. Tomas e Iluminación · Tomas e Iluminación · Reemplazo · Lámpara · Perímetro interior · "Reparación 12 luminarias tortuga: desmontaje, limpieza, reparación cortocircuitos, renovación aislación, nuevas lámparas, impermeabilización, unificación circuitos"',
+   MateriasExtra:'[]','Monto MO':889417,'Monto Materiales':0},
+  {Edificio:'Neptuno XXII',Fecha:'2026-05-09',Hora:'13:35',HoraFin:'17:10',TipoVisita:'Urgencia',Estado:'Aprobado',
+   Intervenciones:'1. Tomas e Iluminación · Tomas e Iluminación · Reparación · Lámpara · Terraza · "No tienen luz en pasillos, térmica baja. Se encuentra cortocircuito en portalámparas, se aíslan cables." || 2. Luces de Emergencia · Luces de Emergencia · Revision · Luz de emergencia · 10º al PB · "Sin autonomía"',
+   MateriasExtra:'[{"nombre":"Aportes de Aislación","qty":1,"un":"u","precio":5200}]','Monto MO':78000,'Monto Materiales':5200},
+];
+
+// ── FECHAS ──
+function hoy(){return new Date().toISOString().split('T')[0];}
+function setAtajo(t){
+  var h=new Date(),d,u=hoy();
+  if(t==='mes'){d=new Date(h.getFullYear(),h.getMonth(),1).toISOString().split('T')[0];}
+  else if(t==='15'){d=new Date(h.getFullYear(),h.getMonth()-1,15).toISOString().split('T')[0];u=new Date(h.getFullYear(),h.getMonth(),15).toISOString().split('T')[0];}
+  else{var x=new Date(h);x.setDate(x.getDate()-30);d=x.toISOString().split('T')[0];}
+  document.getElementById('inp-desde').value=d;
+  document.getElementById('inp-hasta').value=u;
+}
+
+// Init fechas
+(function(){
+  var h=new Date();
+  document.getElementById('inp-desde').value=new Date(h.getFullYear(),h.getMonth()-1,15).toISOString().split('T')[0];
+  document.getElementById('inp-hasta').value=hoy();
+})();
+
+// ── NAVEGACIÓN ──
+function ir(id){
+  document.querySelectorAll('.pant').forEach(function(p){p.classList.remove('on');});
+  document.getElementById(id).classList.add('on');
+  window.scrollTo(0,0);
+}
+
+// ── LIMPIAR MO ──
+function limpiarMO(texto){
+  if(!texto)return '';
+  var partes=texto.split('||').map(function(p){return p.trim();}).filter(Boolean);
+  var lineas=[];
+  partes.forEach(function(p){
+    var idx=p.indexOf('MATERIALES:');
+    if(idx!==-1)p=p.substring(0,idx).trim();
+    p=p.replace(/\s+$/,'').replace(/·\s*$/,'').trim();
+    if(!p)return;
+    p=p.replace(/^\d+\.\s*/,'');
+    var c=p.split(' · ');
+    if(c.length>=3)c=c.slice(2);
+    while(c.length&&!c[0].trim())c.shift();
+    while(c.length&&!c[c.length-1].trim())c.pop();
+    var l=c.join(' · ').trim();
+    if(l)lineas.push(l);
+  });
+  return lineas.join('\n');
+}
+
+// ── CORTAR 400 CHARS ──
+function cortarBloques(texto){
+  if(texto.length<=400)return [texto];
+  var bloques=[],lineas=texto.split('\n'),actual='';
+  lineas.forEach(function(l){
+    var test=actual?actual+'\n'+l:l;
+    if(test.length<=400){actual=test;}
+    else{if(actual)bloques.push(actual);actual=l;}
+  });
+  if(actual)bloques.push(actual);
+  var final=[];
+  bloques.forEach(function(b){
+    if(b.length<=400){final.push(b);}
+    else{for(var i=0;i<b.length;i+=400)final.push(b.substr(i,400));}
+  });
+  return final;
+}
+
+// ── COPIAR ──
+function copiar(txt,btn){
+  navigator.clipboard.writeText(txt).then(function(){
+    var orig=btn.innerHTML;btn.innerHTML='✓ Copiado';btn.classList.add('ok');
+    setTimeout(function(){btn.innerHTML=orig;btn.classList.remove('ok');},2000);
+  }).catch(function(){alert('Seleccioná manualmente.');});
+}
+
+// ── P2: BUSCAR ──
+function irP2(){
+  var desde=document.getElementById('inp-desde').value;
+  var hasta=document.getElementById('inp-hasta').value;
+  if(!desde||!hasta){alert('Elegí las fechas');return;}
+  DESDE=desde;HASTA=hasta;
+  EDIFS=cState.edificios||[];
+  // Filtrar aprobados en período (demo: todos los REGS_DEMO)
+  REGS=(cState.todosRegs||[]).filter(function(r){
+    var f=r.Fecha.split('T')[0];
+    return f>=desde&&f<=hasta&&r.Estado==='Aprobado';
+  });
+  var abonadosSet=new Set(EDIFS.filter(function(e){return String(e.Abonado||'').toLowerCase()==='si';}).map(function(e){return e.Nombre;}));
+  // Inicializar selección — solo registros de abonados, todos tildados
+  sel={};
+  REGS.forEach(function(r,i){
+    if(!abonadosSet.has(r.Edificio))return;
+    if(!sel[r.Edificio])sel[r.Edificio]=new Set();
+    sel[r.Edificio].add(i);
+  });
+  renderP2(desde,hasta,abonadosSet);
+  ir('p2');
+}
+
+function renderP2(desde,hasta,abonadosSet){
+  var df=desde.split('-').reverse().join('/');
+  var hf=hasta.split('-').reverse().join('/');
+  document.getElementById('p2-periodo').textContent=df+' → '+hf;
+  var porEdif={};
+  REGS.forEach(function(r,i){
+    if(!abonadosSet.has(r.Edificio))return;
+    if(!porEdif[r.Edificio])porEdif[r.Edificio]=[];
+    porEdif[r.Edificio].push({r:r,i:i});
+  });
+  var body=document.getElementById('p2-body');
+  body.innerHTML='';
+  if(Object.keys(porEdif).length===0){
+    body.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3);font-size:14px;font-weight:600">Sin registros aprobados de edificios abonados en ese período</div>';
+    actualizarCntSel();return;
+  }
+  // Selector todos/ninguno
+  var selAll=document.createElement('div');
+  selAll.style.cssText='display:flex;gap:8px';
+  selAll.innerHTML=
+    '<div onclick="selTodos(true)" style="flex:1;background:rgba(0,200,150,.1);border:1px solid rgba(0,200,150,.3);border-radius:8px;padding:9px;text-align:center;font-family:\'Bebas Neue\',sans-serif;font-size:14px;letter-spacing:1px;color:var(--verde);cursor:pointer">✓ Todos</div>'+
+    '<div onclick="selTodos(false)" style="flex:1;background:rgba(255,71,87,.06);border:1px solid rgba(255,71,87,.2);border-radius:8px;padding:9px;text-align:center;font-family:\'Bebas Neue\',sans-serif;font-size:14px;letter-spacing:1px;color:var(--rojo);cursor:pointer">✕ Ninguno</div>';
+  body.appendChild(selAll);
+
+  Object.keys(porEdif).sort().forEach(function(edif){
+    var regs=porEdif[edif];
+    var card=document.createElement('div');card.className='card';
+    var total=regs.length;
+    var selN=sel[edif]?sel[edif].size:0;
+    var hdr=document.createElement('div');
+    hdr.style.cssText='background:var(--s2);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-left:4px solid var(--verde)';
+    hdr.id='p2hdr-'+edif.replace(/\s/g,'_');
+    hdr.innerHTML='<div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;letter-spacing:1.5px;color:var(--t)">'+edif+'</div>'+
+      '<div style="font-size:11px;color:var(--t3);font-weight:600" id="p2cnt-'+edif.replace(/\s/g,'_')+'">'+selN+'/'+total+' seleccionados</div></div>'+
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:26px;color:var(--am)" id="p2num-'+edif.replace(/\s/g,'_')+'">'+selN+'</div>';
+    card.appendChild(hdr);
+    regs.forEach(function(item){
+      var r=item.r,i=item.i;
+      var row=document.createElement('div');row.className='reg-row';
+      row.onclick=function(){toggleReg(edif,i);};
+      var chk=document.createElement('div');
+      chk.className='reg-chk'+(sel[edif]&&sel[edif].has(i)?'':' off');
+      chk.id='p2chk-'+i;
+      chk.innerHTML=sel[edif]&&sel[edif].has(i)?'<span style="color:#000;font-size:13px;font-weight:900">✓</span>':'';
+      var info=document.createElement('div');info.className='reg-info';
+      var fecha=r.Fecha.split('T')[0].split('-').reverse().join('/');
+      var hora=r.Hora?String(r.Hora).substring(0,5)+'hs':'';
+      var horaf=r.HoraFin?' → '+String(r.HoraFin).substring(0,5)+'hs':'';
+      var mo=r['Monto MO']>0?'$'+fmt(r['Monto MO'])+' MO':'abono';
+      var mats=r['Monto Materiales']>0?' · $'+fmt(r['Monto Materiales'])+' mats':'';
+      info.innerHTML='<div class="reg-fecha">'+fecha+(hora?' · '+hora+horaf:'')+'</div><div class="reg-detalle">'+mo+mats+'</div>';
+      row.appendChild(chk);row.appendChild(info);
+      card.appendChild(row);
+    });
+    body.appendChild(card);
+  });
+  actualizarCntSel();
+}
+
+function toggleReg(edif,i){
+  if(!sel[edif])sel[edif]=new Set();
+  var ek=edif.replace(/\s/g,'_');
+  if(sel[edif].has(i)){sel[edif].delete(i);}else{sel[edif].add(i);}
+  var chk=document.getElementById('p2chk-'+i);
+  if(chk){var on=sel[edif].has(i);chk.className='reg-chk'+(on?'':' off');chk.innerHTML=on?'<span style="color:#000;font-size:13px;font-weight:900">✓</span>':'';}
+  var total=REGS.filter(function(r){return r.Edificio===edif;}).length;
+  var selN=sel[edif].size;
+  var cnt=document.getElementById('p2cnt-'+ek);if(cnt)cnt.textContent=selN+'/'+total+' seleccionados';
+  var num=document.getElementById('p2num-'+ek);if(num)num.textContent=selN;
+  var hdr=document.getElementById('p2hdr-'+ek);
+  if(hdr)hdr.style.borderLeftColor=selN===total?'var(--verde)':selN>0?'var(--am)':'var(--borde)';
+  actualizarCntSel();
+}
+
+function selTodos(on){
+  var abonadosSet=new Set(EDIFS.filter(function(e){return String(e.Abonado||'').toLowerCase()==='si';}).map(function(e){return e.Nombre;}));
+  REGS.forEach(function(r,i){
+    if(!abonadosSet.has(r.Edificio))return;
+    if(!sel[r.Edificio])sel[r.Edificio]=new Set();
+    if(on)sel[r.Edificio].add(i);else sel[r.Edificio].delete(i);
+    var chk=document.getElementById('p2chk-'+i);
+    if(chk){chk.className='reg-chk'+(on?'':' off');chk.innerHTML=on?'<span style="color:#000;font-size:13px;font-weight:900">✓</span>':'';}
+  });
+  var eks=new Set(REGS.filter(function(r){return abonadosSet.has(r.Edificio);}).map(function(r){return r.Edificio;}));
+  eks.forEach(function(edif){
+    var ek=edif.replace(/\s/g,'_');
+    var total=REGS.filter(function(r){return r.Edificio===edif;}).length;
+    var selN=on?total:0;
+    var cnt=document.getElementById('p2cnt-'+ek);if(cnt)cnt.textContent=selN+'/'+total+' seleccionados';
+    var num=document.getElementById('p2num-'+ek);if(num)num.textContent=selN;
+    var hdr=document.getElementById('p2hdr-'+ek);if(hdr)hdr.style.borderLeftColor=on?'var(--verde)':'var(--borde)';
+  });
+  actualizarCntSel();
+}
+
+function actualizarCntSel(){
+  var t=Object.values(sel).reduce(function(s,set){return s+set.size;},0);
+  document.getElementById('p2-cnt').textContent=t;
+}
+
+// ── GENERAR CHECKLIST ──
+function generarChecklist(){
+  var abonadosSet=new Set(EDIFS.filter(function(e){return String(e.Abonado||'').toLowerCase()==='si';}).map(function(e){return e.Nombre;}));
+  var meses=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  function norm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,'').trim().replace(/\s+/g,'-');}
+  function mesAnio(fecha){var p=fecha.split('T')[0].split('-');return (meses[parseInt(p[1])-1]||p[1])+'-'+p[0];}
+
+  // ABONOS — todos los edificios abonados siempre
+  var todosAb=EDIFS.filter(function(e){return String(e.Abonado||'').toLowerCase()==='si';});
+  CK.abonos=todosAb.map(function(e,i){
+    var precio=Math.round((parseFloat(e['Precio Abono'])||0)*(parseFloat(e.Indice)||1));
+    return {id:'ab'+i,nombre:mesAnio(HASTA)+'-'+norm(e.Nombre)+'-preventivo',edificio:e.Nombre,admin:e['Administración']||'',cuit:e.CUIT||'',monto:precio,tipo:'abono'};
+  });
+
+  // MATERIALES — edificios seleccionados que tienen materiales
+  CK.mats=[];
+  var porEdif={};
+  REGS.forEach(function(r,i){
+    if(!abonadosSet.has(r.Edificio))return;
+    if(!sel[r.Edificio]||!sel[r.Edificio].has(i))return;
+    if(!porEdif[r.Edificio])porEdif[r.Edificio]=[];
+    porEdif[r.Edificio].push(r);
+  });
+  Object.keys(porEdif).sort().forEach(function(edif,ei){
+    var regs=porEdif[edif];
+    var totalMats=regs.reduce(function(s,r){return s+(parseFloat(r['Monto Materiales'])||0);},0);
+    if(totalMats===0)return;
+    var edifObj=EDIFS.find(function(e){return e.Nombre===edif;})||{};
+    CK.mats.push({id:'mat'+ei,nombre:mesAnio(HASTA)+'-'+norm(edif)+'-mat-preventivo',edificio:edif,cuit:edifObj.CUIT||'',monto:totalMats,regs:regs,tipo:'mats'});
+  });
+
+  // PARTICULARES — registros NO seleccionados de abonados + todos los no abonados
+  CK.parts=[];
+  REGS.forEach(function(r,i){
+    var esAbonado=abonadosSet.has(r.Edificio);
+    var estaSeleccionado=sel[r.Edificio]&&sel[r.Edificio].has(i);
+    // No abonado: siempre particular
+    // Abonado pero destildado: también particular
+    if(!esAbonado||!estaSeleccionado){
+      var edifObj=EDIFS.find(function(e){return e.Nombre===r.Edificio;})||{};
+      var total=(parseFloat(r['Monto MO'])||0)+(parseFloat(r['Monto Materiales'])||0);
+      var fecha=r.Fecha.split('T')[0];
+      CK.parts.push({id:'part'+i,nombre:mesAnio(fecha)+'-'+norm(r.Edificio)+'-'+norm(r.TipoVisita||'service'),
+        edificio:r.Edificio,cuit:edifObj.CUIT||'',fecha:fecha.split('-').reverse().join('/'),
+        tipo:'part',monto:total,reg:r});
+    }
+  });
+
+  renderP3();
+  ir('p3');
+}
+
+// ── RENDER P3 CHECKLIST ──
+function renderP3(){
+  var df=DESDE.split('-').reverse().join('/'),hf=HASTA.split('-').reverse().join('/');
+  document.getElementById('p3-periodo').textContent=df+' → '+hf;
+  var body=document.getElementById('p3-body');
+  body.innerHTML='';
+  var totalAb=CK.abonos.reduce(function(s,a){return s+a.monto;},0);
+  var totalMat=CK.mats.reduce(function(s,m){return s+m.monto;},0);
+  var totalPart=CK.parts.reduce(function(s,p){return s+p.monto;},0);
+  var totalBol=CK.abonos.length+CK.mats.length+CK.parts.length;
+
+  // Resumen
+  var res=document.createElement('div');res.className='resumen';
+  res.innerHTML=
+    '<div class="ri"><div class="rn" style="color:var(--verde)">'+CK.abonos.length+'</div><div class="rl">Abonos</div><div class="rm" style="color:var(--verde)">$'+fmt(totalAb)+'</div></div>'+
+    '<div class="ri"><div class="rn" style="color:var(--am)">'+CK.mats.length+'</div><div class="rl">Mats</div><div class="rm" style="color:var(--am)">$'+fmt(totalMat)+'</div></div>'+
+    '<div class="ri"><div class="rn" style="color:var(--azul)">'+CK.parts.length+'</div><div class="rl">Part.</div><div class="rm" style="color:var(--azul)">$'+fmt(totalPart)+'</div></div>'+
+    '<div class="ri"><div class="rn" style="color:var(--t)">'+totalBol+'</div><div class="rl">Boletas</div><div class="rm" style="color:var(--t)">$'+fmt(totalAb+totalMat+totalPart)+'</div></div>';
+  body.appendChild(res);
+
+  function mkSec(titulo,color,badge,items,tipo){
+    var div=document.createElement('div');
+    div.innerHTML='<div class="ck-stit" style="color:'+color+'">'+titulo+
+      '<span class="ck-badge" style="background:rgba(255,255,255,.06);border:1px solid '+color+';color:'+color+'" id="badge-'+tipo+'">'+items.length+' pendientes</span></div>';
+    items.forEach(function(item){
+      var el=document.createElement('div');
+      el.className='cki'+(facturados[item.id]?' tachado':'');
+      el.id='cki-'+item.id;
+      el.style.borderLeftColor=color;
+      el.style.borderLeft='4px solid '+color;
+      el.innerHTML=
+        '<div class="cki-chk" id="ckichk-'+item.id+'" style="border-color:'+color+';background:'+(facturados[item.id]?color:'transparent')+'">'+
+          (facturados[item.id]?'<span style="color:#000;font-size:12px;font-weight:900">✓</span>':'')+
+        '</div>'+
+        '<div style="flex:1;min-width:0"><div class="cki-nom">'+item.nombre+'</div><div class="cki-sub">'+(item.admin||item.edificio||'')+(item.fecha?' · '+item.fecha:'')+'</div></div>'+
+        '<div class="cki-monto" style="color:'+color+'">$'+fmt(item.monto)+'</div>';
+      el.onclick=function(){abrirFacturacion(item);};
+      div.appendChild(el);
+    });
+    return div;
+  }
+
+  body.appendChild(mkSec('🏢 Abonos mensuales','var(--verde)','badge-ab',CK.abonos,'ab'));
+  if(CK.mats.length>0)body.appendChild(mkSec('📦 Materiales de abono','var(--am)','badge-mat',CK.mats,'mat'));
+  if(CK.parts.length>0)body.appendChild(mkSec('⚡ Trabajos particulares','var(--azul)','badge-part',CK.parts,'part'));
+}
+
+// ── MARCAR FACTURADO ──
+function marcarFacturado(id,btn){
+  var ya=facturados[id];facturados[id]=!ya;
+  btn.textContent=!ya?'✓ Facturado — Tocá para deshacer':'✓ Marcar como facturado';
+  btn.classList.toggle('done',!ya);
+  var el=document.getElementById('cki-'+id);if(el)el.classList.toggle('tachado',!ya);
+  var chk=document.getElementById('ckichk-'+id);
+  if(chk){
+    var item=[].concat(CK.abonos,CK.mats,CK.parts).find(function(x){return x.id===id;});
+    var colorMap={abono:'var(--verde)',mats:'var(--am)',part:'var(--azul)'};
+    var color=item?(colorMap[item.tipo]||'var(--verde)'):'var(--verde)';
+    chk.style.background=!ya?color:'transparent';
+    chk.innerHTML=!ya?'<span style="color:#000;font-size:12px;font-weight:900">✓</span>':'';
+  }
+}
+
+// ── PANTALLA FACTURACIÓN ──
+function mkBloques(id,label,texto,color,monto,montoLabel){
+  var bloques=cortarBloques(texto);
+  var html='';
+  bloques.forEach(function(b,bi){
+    var n=b.length;
+    var cls=n>400?'cha-over':n>350?'cha-warn':'cha-ok';
+    var bid='blq-'+id+'-'+bi;
+    var tit=label+(bloques.length>1?' (parte '+(bi+1)+'/'+bloques.length+')':'');
+    html+='<div class="blq">'+
+      '<div class="blq-lbl" style="color:'+color+'">'+tit+'<span class="'+cls+'">'+n+'/400</span></div>'+
+      '<div class="box" id="'+bid+'">'+b+'</div>'+
+      '<div class="mrow"><span style="font-size:12px;color:var(--t3);font-weight:700">'+(montoLabel||'MO')+':</span>'+
+      '<span class="mnum">$'+fmt(monto||0)+'</span></div>'+
+      '<div style="display:flex;justify-content:flex-end;margin-top:6px">'+
+      '<div class="bcop" onclick="copiar(document.getElementById(\''+bid+'\').textContent,this)">📋 Copiar</div></div>'+
+      '</div>';
+  });
+  return html;
+}
+
+function abrirFacturacion(item){
+  document.getElementById('p4-titulo').textContent=item.edificio;
+  var tipos={abono:'Abono mensual',mats:'Materiales del período',part:'Trabajo particular'};
+  document.getElementById('p4-sub').textContent=(tipos[item.tipo]||'')+(item.fecha?' · '+item.fecha:'');
+  var body=document.getElementById('p4-body');
+  body.innerHTML='';
+
+  function mkCard(inner){
+    var d=document.createElement('div');d.className='card';d.innerHTML=inner;return d;
+  }
+
+  // CUIT
+  body.appendChild(mkCard(
+    '<div class="blq"><div class="blq-lbl">CUIT</div>'+
+    '<div class="cbox"><div class="cnum">'+(item.cuit||'Sin CUIT')+'</div>'+
+    (item.cuit?'<div class="bcop" onclick="copiar(\''+item.cuit+'\',this)">Copiar</div>':'')+
+    '</div></div>'
+  ));
+
+  if(item.tipo==='abono'){
+    // Concepto fijo
+    var concepto='Mantenimiento preventivo de instalaciones eléctricas en espacios comunes · '+item.edificio;
+    body.appendChild(mkCard(mkBloques(item.id+'-c','🛠️ Concepto','var(--verde)',concepto,'var(--verde)',item.monto,'Monto abono')));
+
+  } else if(item.tipo==='mats'){
+    // Visitas → conceptos MO $0
+    var numC=0;
+    item.regs.forEach(function(r,vi){
+      numC++;
+      var cab=r.Fecha.split('T')[0].split('-').reverse().join('/')+' · '+(r.Hora||'').substring(0,5)+'hs'+(r.HoraFin?' a '+r.HoraFin.substring(0,5)+'hs':'');
+      var desc=limpiarMO(r.Intervenciones||'');
+      var lineas=desc.split('\n').filter(function(l){return l.trim();});
+      var descNum=lineas.map(function(l,i){return (i+1)+'. '+l;}).join('\n');
+      var texto=cab+(descNum?'\n'+descNum:'');
+      body.appendChild(mkCard(mkBloques(item.id+'-v'+vi,'🛠️ Concepto '+numC+' — Visita '+(vi+1),texto,'var(--azul)',0,'MO (abono)')));
+    });
+    // Materiales consolidados
+    var matsTodos={};
+    item.regs.forEach(function(r){
+      try{
+        var arr=JSON.parse(r.MateriasExtra||r['Materiales Extra']||'[]');
+        if(Array.isArray(arr))arr.forEach(function(m){
+          var nom=m.nombre||'';var qty=parseInt(m.qty||m.cantidad||1)||1;
+          var un=m.un||m.unidad||'u';var pr=parseFloat(m.precio||0)||0;
+          if(!nom)return;
+          if(!matsTodos[nom])matsTodos[nom]={qty:0,un:un,precio:pr};
+          matsTodos[nom].qty+=qty;
+        });
+      }catch(e){}
+    });
+    var totalM=Object.entries(matsTodos).reduce(function(s,e){return s+Math.round(e[1].precio*e[1].qty);},0);
+    var matLines=Object.entries(matsTodos).map(function(e){
+      var nom=e[0],inf=e[1];
+      var sub=Math.round(inf.precio*inf.qty);
+      return '- '+inf.qty+' '+inf.un+' · '+nom+(inf.precio>0?' — $'+fmt(inf.precio)+' c/u = $'+fmt(sub):'');
+    });
+    var textoM='Materiales utilizados durante el período:\n'+matLines.join('\n')+(totalM>0?'\n\nTOTAL MATERIALES: $'+fmt(totalM):'');
+    body.appendChild(mkCard(mkBloques(item.id+'-mat','📦 Materiales',textoM,'var(--t3)',totalM,'Total mats')));
+
+  } else if(item.tipo==='part'){
+    var r=item.reg;
+    var cab=r.Fecha.split('T')[0].split('-').reverse().join('/')+' · '+(r.Hora||'').substring(0,5)+'hs'+(r.HoraFin?' a '+r.HoraFin.substring(0,5)+'hs':'');
+    var desc=limpiarMO(r.Intervenciones||'');
+    var lineas=desc.split('\n').filter(function(l){return l.trim();});
+    var descNum=lineas.map(function(l,i){return (i+1)+'. '+l;}).join('\n');
+    var texto=cab+(descNum?'\n'+descNum:'');
+    body.appendChild(mkCard(mkBloques(item.id+'-mo','🛠️ Mano de obra',texto,'var(--azul)',parseFloat(r['Monto MO'])||0,'MO')));
+    // Materiales si hay
+    try{
+      var arr=JSON.parse(r.MateriasExtra||r['Materiales Extra']||'[]');
+      if(Array.isArray(arr)&&arr.length>0){
+        var totalMp=arr.reduce(function(s,m){return s+Math.round((parseFloat(m.precio||0))*(parseInt(m.qty||m.cantidad||1)||1));},0);
+        var mlp=arr.map(function(m){
+          var sub=Math.round((parseFloat(m.precio||0))*(parseInt(m.qty||m.cantidad||1)||1));
+          return '- '+(m.qty||m.cantidad||1)+' '+(m.un||m.unidad||'u')+' · '+(m.nombre||'')+(m.precio>0?' — $'+fmt(m.precio)+' c/u = $'+fmt(sub):'');
+        });
+        var textoMP='Materiales:\n'+mlp.join('\n')+(totalMp>0?'\n\nTOTAL: $'+fmt(totalMp):'');
+        body.appendChild(mkCard(mkBloques(item.id+'-mat','📦 Materiales',textoMP,'var(--t3)',totalMp,'Total mats')));
+      }
+    }catch(e){}
+  }
+
+  // Nombre PDF
+  body.appendChild(mkCard(
+    '<div class="blq"><div class="blq-lbl">📄 Nombre PDF</div>'+
+    '<div class="npdf"><span>'+item.nombre+'</span>'+
+    '<div class="bcop" onclick="copiar(\''+item.nombre+'\',this)">Copiar</div></div></div>'
+  ));
+
+  // Botón facturado
+  body.appendChild(mkCard(
+    '<div class="blq"><div class="bfact'+(facturados[item.id]?' done':'')+'" id="btnf-'+item.id+'" onclick="marcarFacturado(\''+item.id+'\',this)">'+
+    (facturados[item.id]?'✓ Facturado — Tocá para deshacer':'✓ Marcar como facturado')+'</div></div>'
+  ));
+
+  ir('p4');
 }
 
 </script>
