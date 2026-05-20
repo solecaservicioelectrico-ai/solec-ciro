@@ -438,7 +438,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.13</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.14</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -2387,7 +2387,7 @@ function cAgregarChecklist(body, porEdif, desde, hasta) {
     if(t>0)matsPorEdif[edif]=t;
   });
 
-  var totalA=todosAbonados.reduce(function(s,e){return s+Math.round((parseFloat(e['Precio Abono'])||0)*(parseFloat(e['Indice'])||1));},0);
+  var totalA=todosAbonados.reduce(function(s,e){return s+Math.round((parseFloat(e['Precio Abono']||e['precio_abono']||e.PrecioAbono||0)||0)*(parseFloat(e['Indice'])||1));},0);
   var totalM=Object.values(matsPorEdif).reduce(function(s,v){return s+v;},0);
   var totalT=trabajos.reduce(function(s,r){return s+(parseFloat(r['Monto MO'])||0)+(parseFloat(r['Monto Materiales'])||0);},0);
   var desdeF=desde.split('-').reverse().join('/');
@@ -2440,7 +2440,7 @@ function cAgregarChecklist(body, porEdif, desde, hasta) {
   var sA=document.createElement('div');
   sA.innerHTML='<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--verde);margin:10px 0 6px">Abonos mensuales ('+todosAbonados.length+')</div>';
   todosAbonados.sort(function(a,b){return(a.Nombre||'').localeCompare(b.Nombre||'');}).forEach(function(e){
-    var precio=Math.round((parseFloat(e['Precio Abono'])||0)*(parseFloat(e['Indice'])||1));
+    var precio=Math.round((parseFloat(e['Precio Abono']||e['precio_abono']||e.PrecioAbono||0)||0)*(parseFloat(e['Indice'])||1));
     sA.appendChild(mkItem(genNombre(e.Nombre,hasta,false),(e['Administración']||''),precio,'var(--verde)'));
   });
   sec.appendChild(sA);
@@ -2560,7 +2560,7 @@ function ckRender(){
   var abonados=ckState.edificios.filter(function(e){return String(e.Abonado||'').toLowerCase()==='si';});
 
   // Totales
-  var totalA=usarEdificios?abonados.reduce(function(s,e){return s+Math.round((parseFloat(e['Precio Abono'])||0)*(parseFloat(e['Indice'])||1));},0):itemsAbono.reduce(function(s,i){return s+(parseFloat(i.Monto)||0);},0);
+  var totalA=usarEdificios?abonados.reduce(function(s,e){return s+Math.round((parseFloat(e['Precio Abono']||e['precio_abono']||e.PrecioAbono||0)||0)*(parseFloat(e['Indice'])||1));},0):itemsAbono.reduce(function(s,i){return s+(parseFloat(i.Monto)||0);},0);
   var totalM=itemsMats.reduce(function(s,i){return s+(parseFloat(i.Monto)||0);},0);
   var totalT=trabajos.reduce(function(s,r){return s+(parseFloat(r['Monto MO'])||0)+(parseFloat(r['Monto Materiales'])||0);},0);
   var cantAbonos=usarEdificios?abonados.length:itemsAbono.length;
@@ -2581,7 +2581,7 @@ function ckRender(){
     // Sin consolidador ejecutado — mostrar edificios abonados
     abonados.sort(function(a,b){return(a.Nombre||'').localeCompare(b.Nombre||'');}).forEach(function(e,i){
       var id='ab'+i;if(ckChecked[id]===undefined)ckChecked[id]=false;
-      var total=Math.round((parseFloat(e['Precio Abono'])||0)*(parseFloat(e['Indice'])||1));
+      var total=Math.round((parseFloat(e['Precio Abono']||e['precio_abono']||e.PrecioAbono||0)||0)*(parseFloat(e['Indice'])||1));
       var nombre=ckGenerarNombre(e.Nombre,'Preventivo/Abono',ckState.hasta,false);
       lA.appendChild(ckCrearItem(id,nombre,e.Nombre+' · '+(e['Administración']||''),'Abono mensual',total,'var(--verde)'));
     });
@@ -2874,7 +2874,7 @@ function generarChecklist(){
   // ABONOS — todos los edificios abonados siempre
   var todosAb=EDIFS.filter(function(e){return String(e.Abonado||'').toLowerCase()==='si';});
   CK.abonos=todosAb.map(function(e,i){
-    var precio=Math.round((parseFloat(e['Precio Abono'])||0)*(parseFloat(e.Indice)||1));
+    var precio=Math.round((parseFloat(e['Precio Abono']||e['precio_abono']||e.PrecioAbono||0)||0)*(parseFloat(e.Indice)||1));
     return {id:'ab'+i,nombre:mesAnio(HASTA)+'-'+norm(e.Nombre)+'-preventivo',edificio:e.Nombre,admin:e['Administración']||'',cuit:e.CUIT||'',monto:precio,tipo:'abono'};
   });
 
@@ -3020,9 +3020,8 @@ function abrirFacturacion(item){
   ));
 
   if(item.tipo==='abono'){
-    // Concepto fijo
     var concepto='Mantenimiento preventivo de instalaciones eléctricas en espacios comunes · '+item.edificio;
-    body.appendChild(mkCard(mkBloques(item.id+'-c','🛠️ Concepto','var(--verde)',concepto,'var(--verde)',item.monto,'Monto abono')));
+    body.appendChild(mkCard(mkBloques(item.id+'-c','🛠️ Concepto',concepto,'var(--verde)',item.monto,'Monto abono')));
 
   } else if(item.tipo==='mats'){
     // Visitas → conceptos MO $0
