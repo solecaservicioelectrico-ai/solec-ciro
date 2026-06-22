@@ -3000,6 +3000,44 @@ function mkBloques(id,label,texto,color,monto,montoLabel){
   return html;
 }
 
+// ── EXTRAER MATERIALES DE UN REGISTRO (JSON + texto "MATERIALES:" dentro de Intervenciones) ──
+// Misma lógica robusta que ya usa cGenerar() en el consolidador general, para que
+// abrirFacturacion() encuentre los materiales sin importar en qué formato quedaron guardados.
+function extraerMateriales(r){
+  var mt={};
+  var raw=r.MateriasExtra||r['Materiales Extra']||'';
+  if(raw&&raw!=='[]'){
+    try{
+      var arr=JSON.parse(raw);
+      if(Array.isArray(arr))arr.forEach(function(m){
+        var nom=m.nombre||m.Nombre||'';
+        var qty=parseInt(m.cantidad||m.qty||1)||1;
+        var un=m.unidad||m.Unidad||m.un||'u';
+        var pr=parseFloat(m.precio||m.Precio||0)||cGetPrecio(nom);
+        if(!nom)return;
+        if(!mt[nom])mt[nom]={qty:0,un:un,precio:pr};
+        mt[nom].qty+=qty;
+        if(pr&&!mt[nom].precio)mt[nom].precio=pr;
+      });
+    }catch(e){}
+  }
+  String(r.Intervenciones||'').split('||').forEach(function(p){
+    var idx=p.indexOf('MATERIALES:');
+    if(idx===-1)return;
+    p.substring(idx+11).split(',').forEach(function(it){
+      it=it.trim();if(!it)return;
+      var m=it.match(/^(\d+)\s*([a-zA-Z]+)\s+(.+)$/);
+      if(m){
+        var qty=parseInt(m[1])||1,un=m[2],nom=m[3].trim();
+        var pr=cGetPrecio(nom);
+        if(!mt[nom])mt[nom]={qty:0,un:un,precio:pr};
+        mt[nom].qty+=qty;
+      }
+    });
+  });
+  return mt;
+}
+
 function abrirFacturacion(item){
   document.getElementById('p4-titulo').textContent=item.edificio;
   var tipos={abono:'Abono mensual',mats:'Materiales del período',part:'Trabajo particular'};
@@ -3035,27 +3073,25 @@ function abrirFacturacion(item){
       var texto=cab+(descNum?'\n'+descNum:'');
       body.appendChild(mkCard(mkBloques(item.id+'-v'+vi,'🛠️ Concepto '+numC+' — Visita '+(vi+1),texto,'var(--azul)',0,'MO (abono)')));
     });
-    // Materiales consolidados
+    // Materiales consolidados (combina JSON de MateriasExtra + texto "MATERIALES:" en Intervenciones)
     var matsTodos={};
     item.regs.forEach(function(r){
-      try{
-        var arr=JSON.parse(r.MateriasExtra||r['Materiales Extra']||'[]');
-        if(Array.isArray(arr))arr.forEach(function(m){
-          var nom=m.nombre||'';var qty=parseInt(m.qty||m.cantidad||1)||1;
-          var un=m.un||m.unidad||'u';var pr=parseFloat(m.precio||0)||0;
-          if(!nom)return;
-          if(!matsTodos[nom])matsTodos[nom]={qty:0,un:un,precio:pr};
-          matsTodos[nom].qty+=qty;
-        });
-      }catch(e){}
+      var mr=extraerMateriales(r);
+      Object.keys(mr).forEach(function(nom){
+        if(!matsTodos[nom])matsTodos[nom]={qty:0,un:mr[nom].un,precio:mr[nom].precio};
+        matsTodos[nom].qty+=mr[nom].qty;
+        if(mr[nom].precio&&!matsTodos[nom].precio)matsTodos[nom].precio=mr[nom].precio;
+      });
     });
     var totalM=Object.entries(matsTodos).reduce(function(s,e){return s+Math.round(e[1].precio*e[1].qty);},0);
+    var totalMReg=item.regs.reduce(function(s,r){return s+(parseFloat(r['Monto Materiales'])||0);},0);
+    if(totalM===0&&totalMReg>0)totalM=totalMReg;
     var matLines=Object.entries(matsTodos).map(function(e){
       var nom=e[0],inf=e[1];
       var sub=Math.round(inf.precio*inf.qty);
-      return '- '+inf.qty+' '+inf.un+' · '+nom+(inf.precio>0?' — $'+fmt(inf.precio)+' c/u = $'+fmt(sub):'');
+      return '- '+inf.qty+' '+inf.un+' · '+nom+(inf.precio>0?' — $'+fmt(inf.precio)+' c/u = $'+fmt(sub):' — Sin precio');
     });
-    var textoM='Materiales utilizados durante el período:\n'+matLines.join('\n')+(totalM>0?'\n\nTOTAL MATERIALES: $'+fmt(totalM):'');
+    var textoM='Materiales utilizados durante el período:\n'+(matLines.length?matLines.join('\n'):'(Sin detalle individual — monto total: $'+fmt(totalM)+')')+(totalM>0?'\n\nTOTAL MATERIALES: $'+fmt(totalM):'');
     body.appendChild(mkCard(mkBloques(item.id+'-mat','📦 Materiales',textoM,'var(--t3)',totalM,'Total mats')));
 
   } else if(item.tipo==='part'){
@@ -3066,19 +3102,20 @@ function abrirFacturacion(item){
     var descNum=lineas.map(function(l,i){return (i+1)+'. '+l;}).join('\n');
     var texto=cab+(descNum?'\n'+descNum:'');
     body.appendChild(mkCard(mkBloques(item.id+'-mo','🛠️ Mano de obra',texto,'var(--azul)',parseFloat(r['Monto MO'])||0,'MO')));
-    // Materiales si hay
-    try{
-      var arr=JSON.parse(r.MateriasExtra||r['Materiales Extra']||'[]');
-      if(Array.isArray(arr)&&arr.length>0){
-        var totalMp=arr.reduce(function(s,m){return s+Math.round((parseFloat(m.precio||0))*(parseInt(m.qty||m.cantidad||1)||1));},0);
-        var mlp=arr.map(function(m){
-          var sub=Math.round((parseFloat(m.precio||0))*(parseInt(m.qty||m.cantidad||1)||1));
-          return '- '+(m.qty||m.cantidad||1)+' '+(m.un||m.unidad||'u')+' · '+(m.nombre||'')+(m.precio>0?' — $'+fmt(m.precio)+' c/u = $'+fmt(sub):'');
-        });
-        var textoMP='Materiales:\n'+mlp.join('\n')+(totalMp>0?'\n\nTOTAL: $'+fmt(totalMp):'');
-        body.appendChild(mkCard(mkBloques(item.id+'-mat','📦 Materiales',textoMP,'var(--t3)',totalMp,'Total mats')));
-      }
-    }catch(e){}
+    // Materiales (combina JSON de MateriasExtra + texto "MATERIALES:" en Intervenciones)
+    var mr=extraerMateriales(r);
+    var totalMp=Object.entries(mr).reduce(function(s,e){return s+Math.round(e[1].precio*e[1].qty);},0);
+    var totalMpReg=parseFloat(r['Monto Materiales'])||0;
+    if(totalMp===0&&totalMpReg>0)totalMp=totalMpReg;
+    if(totalMp>0||Object.keys(mr).length>0){
+      var mlp=Object.entries(mr).map(function(e){
+        var nom=e[0],inf=e[1];
+        var sub=Math.round(inf.precio*inf.qty);
+        return '- '+inf.qty+' '+inf.un+' · '+nom+(inf.precio>0?' — $'+fmt(inf.precio)+' c/u = $'+fmt(sub):' — Sin precio');
+      });
+      var textoMP='Materiales:\n'+(mlp.length?mlp.join('\n'):'(Sin detalle individual — monto total: $'+fmt(totalMp)+')')+(totalMp>0?'\n\nTOTAL: $'+fmt(totalMp):'');
+      body.appendChild(mkCard(mkBloques(item.id+'-mat','📦 Materiales',textoMP,'var(--t3)',totalMp,'Total mats')));
+    }
   }
 
   // Nombre PDF
