@@ -438,7 +438,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.16</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.18</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -2696,6 +2696,16 @@ function ir(id){
 // ── LIMPIAR MO ──
 function limpiarMO(texto){
   if(!texto)return '';
+  return limpiarMOArray(texto).join('\n');
+}
+
+// Igual que limpiarMO pero devuelve el array SIN unir — una entrada por intervención,
+// en el mismo orden que el array MO_Data, para poder facturar cada intervención
+// como concepto separado (con su propio precio_aprobado), tal como se factura cada
+// registro individual hoy. Cada intervención es su propio renglón en AFIP, sin excepción
+// (incluso si su MO es $0 — un $0 sigue siendo una intervención real, no se omite).
+function limpiarMOArray(texto){
+  if(!texto)return [];
   var partes=texto.split('||').map(function(p){return p.trim();}).filter(Boolean);
   var lineas=[];
   partes.forEach(function(p){
@@ -2711,7 +2721,7 @@ function limpiarMO(texto){
     var l=c.join(' · ').trim();
     if(l)lineas.push(l);
   });
-  return lineas.join('\n');
+  return lineas;
 }
 
 // ── CORTAR 400 CHARS ──
@@ -3097,11 +3107,26 @@ function abrirFacturacion(item){
   } else if(item.tipo==='part'){
     var r=item.reg;
     var cab=r.Fecha.split('T')[0].split('-').reverse().join('/')+' · '+(r.Hora||'').substring(0,5)+'hs'+(r.HoraFin?' a '+r.HoraFin.substring(0,5)+'hs':'');
-    var desc=limpiarMO(r.Intervenciones||'');
-    var lineas=desc.split('\n').filter(function(l){return l.trim();});
-    var descNum=lineas.map(function(l,i){return (i+1)+'. '+l;}).join('\n');
-    var texto=cab+(descNum?'\n'+descNum:'');
-    body.appendChild(mkCard(mkBloques(item.id+'-mo','🛠️ Mano de obra',texto,'var(--azul)',parseFloat(r['Monto MO'])||0,'MO')));
+    var lineasIv=limpiarMOArray(r.Intervenciones||'');
+    // Montos individuales por intervención: vienen de MO_Data[i].precio_aprobado (puesto por Ali).
+    // Un monto en 0 es válido y se muestra igual (la intervención existió aunque no se cobre).
+    var moDataArr=null;
+    try{var tmp=JSON.parse(r.MO_Data||'[]');if(Array.isArray(tmp)&&tmp.length)moDataArr=tmp;}catch(e){}
+    var tieneMontosIndividuales=moDataArr&&moDataArr.length===lineasIv.length&&moDataArr.some(function(d){return d&&d.precio_aprobado!==undefined&&d.precio_aprobado!==null;});
+
+    if(tieneMontosIndividuales){
+      // Un concepto = un renglón de factura por cada intervención, con su propio monto.
+      lineasIv.forEach(function(l,i){
+        var monto=parseFloat(moDataArr[i]&&moDataArr[i].precio_aprobado)||0;
+        var texto=cab+'\n'+(i+1)+'. '+l;
+        body.appendChild(mkCard(mkBloques(item.id+'-mo'+i,'🛠️ Mano de obra — Intervención '+(i+1),texto,'var(--azul)',monto,'MO')));
+      });
+    } else {
+      // Fallback: registros viejos sin MO_Data con precio_aprobado — comportamiento anterior (un solo bloque con el total).
+      var descNum=lineasIv.map(function(l,i){return (i+1)+'. '+l;}).join('\n');
+      var texto=cab+(descNum?'\n'+descNum:'');
+      body.appendChild(mkCard(mkBloques(item.id+'-mo','🛠️ Mano de obra',texto,'var(--azul)',parseFloat(r['Monto MO'])||0,'MO')));
+    }
     // Materiales (combina JSON de MateriasExtra + texto "MATERIALES:" en Intervenciones)
     var mr=extraerMateriales(r);
     var totalMp=Object.entries(mr).reduce(function(s,e){return s+Math.round(e[1].precio*e[1].qty);},0);
