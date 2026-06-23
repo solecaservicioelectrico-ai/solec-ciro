@@ -438,7 +438,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.20</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.21</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -1463,6 +1463,23 @@ function armarConceptoMO(iv, edif, fecha){
   return txt.slice(0,400);
 }
 
+// Igual que armarConceptoMO pero, si el texto completo supera 400 caracteres,
+// lo devuelve partido en varios bloques (Parte 1/2, Parte 2/2...) en vez de
+// truncarlo y perder el resto de la nota. Una sola intervención puede ocupar
+// más de un concepto/renglón de AFIP cuando su texto no entra en 400.
+function armarConceptoMOPartes(iv, edif, fecha){
+  var descTexto=iv.desc||'';
+  var notaMatch=descTexto.match(/"([^"]+)"/);
+  var notaLibre=notaMatch?notaMatch[1]:'';
+  var descSinNota=descTexto.replace(/"[^"]*"/,'').replace(/·\s*$/,'').trim();
+  var txt=descSinNota+' · '+(edif||'')+' · '+fecha;
+  if(notaLibre) txt+=' · '+notaLibre;
+  if(txt.length<=400)return [txt];
+  var partes=[];
+  for(var i=0;i<txt.length;i+=400)partes.push(txt.substr(i,400));
+  return partes;
+}
+
 function armarConceptoMats(ivs, edif, fecha){
   var todos=[];
   ivs.forEach(function(iv){
@@ -1544,27 +1561,42 @@ function renderAfip(reg,cuit,mo,ivs,matTotal){
 
   var html='<div style="font-size:11px;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Renglones — tocá 📋 para copiar cada concepto</div>';
 
-  // Un renglón por intervención de MO — monto editable
+  // Un renglón por intervención de MO — si el texto de una intervención supera 400
+  // caracteres, se parte en Parte 1/2, Parte 2/2... El monto (editable) pertenece a
+  // la intervención completa, así que el input solo se muestra en su primera parte;
+  // las partes siguientes muestran el mismo monto de referencia, sin input duplicado.
+  var conceptosFlat=[]; // {texto, ivIdx, parteIdx, totalPartes}
   ivsMO.forEach(function(iv,i){
-    var concepto=armarConceptoMO(iv,edif,fecha);
-    var moIv=mosPorIv[i]||0;
+    var partes=armarConceptoMOPartes(iv,edif,fecha);
+    partes.forEach(function(txt,pIdx){
+      conceptosFlat.push({texto:txt,ivIdx:i,parteIdx:pIdx,totalPartes:partes.length});
+    });
+  });
+
+  conceptosFlat.forEach(function(c,flatIdx){
+    var concepto=c.texto;
+    var moIv=mosPorIv[c.ivIdx]||0;
     var moIvNeto=dMo>0?Math.round(moIv*(1-dMo/100)):moIv;
     var charCount=concepto.length;
     var charColor=charCount>380?'var(--rojo)':charCount>300?'var(--am)':'var(--t3)';
+    var tit='CONCEPTO '+(c.ivIdx+1)+(c.totalPartes>1?' (parte '+(c.parteIdx+1)+'/'+c.totalPartes+')':'');
+    var esPrimeraParte=c.parteIdx===0;
     html+=
       '<div style="background:var(--s2);border:1px solid var(--borde);border-radius:10px;padding:12px 14px;margin-bottom:8px;">'+
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">'+
-          '<div style="font-size:11px;color:var(--azul);font-weight:800;letter-spacing:1px;text-transform:uppercase;">CONCEPTO '+(i+1)+'</div>'+
+          '<div style="font-size:11px;color:var(--azul);font-weight:800;letter-spacing:1px;text-transform:uppercase;">'+tit+'</div>'+
           '<div style="font-size:11px;color:'+charColor+';font-weight:700;">'+charCount+'/400</div>'+
         '</div>'+
         '<div style="font-size:13px;color:var(--t);font-weight:600;line-height:1.5;margin-bottom:10px;">'+esc(concepto)+'</div>'+
         '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'+
           '<div style="display:flex;gap:16px;font-size:13px;font-weight:800;">'+
-            '<span style="color:var(--t2);font-size:13px;font-weight:800;">$</span>'+
-            '<input id="mo-iv-'+i+'" type="number" value="'+moIv+'" oninput="actualizarMoIv('+i+')" style="background:var(--s3);border:1.5px solid var(--borde);border-radius:8px;padding:6px 10px;color:var(--am);font-family:Bebas Neue,sans-serif;font-size:18px;width:130px;text-align:right;outline:none;"/>'+
-            (dMo>0?'<span style="color:var(--rojo);font-size:13px;">Desc. '+dMo+'%</span><span id="mo-iv-neto-'+i+'" style="color:var(--verde);font-family:Bebas Neue,sans-serif;font-size:18px;">$'+moIvNeto.toLocaleString('es-AR')+'</span>':'')+
+            (esPrimeraParte?
+              ('<span style="color:var(--t2);font-size:13px;font-weight:800;">$</span>'+
+              '<input id="mo-iv-'+c.ivIdx+'" type="number" value="'+moIv+'" oninput="actualizarMoIv('+c.ivIdx+')" style="background:var(--s3);border:1.5px solid var(--borde);border-radius:8px;padding:6px 10px;color:var(--am);font-family:Bebas Neue,sans-serif;font-size:18px;width:130px;text-align:right;outline:none;"/>'+
+              (dMo>0?'<span style="color:var(--rojo);font-size:13px;">Desc. '+dMo+'%</span><span id="mo-iv-neto-'+c.ivIdx+'" style="color:var(--verde);font-family:Bebas Neue,sans-serif;font-size:18px;">$'+moIvNeto.toLocaleString('es-AR')+'</span>':''))
+              :('<span style="color:var(--t3);font-size:12px;font-weight:700;">(monto en parte 1)</span>'))+
           '</div>'+
-          '<button onclick="copiarConcepto('+i+')" style="background:var(--azul);border:none;border-radius:8px;padding:8px 16px;color:#fff;font-family:Bebas Neue,sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;">'+
+          '<button onclick="copiarConcepto('+flatIdx+')" style="background:var(--azul);border:none;border-radius:8px;padding:8px 16px;color:#fff;font-family:Bebas Neue,sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;">'+
             '📋 COPIAR</button>'+
         '</div>'+
       '</div>';
@@ -1597,8 +1629,9 @@ function renderAfip(reg,cuit,mo,ivs,matTotal){
 
   res.innerHTML=html;
 
-  // Guardar conceptos para copiar
-  window._afipConceptos=ivsMO.map(function(iv,i){return {concepto:armarConceptoMO(iv,edif,fecha),mo:mosPorIv[i]||0};});
+  // Guardar conceptos para copiar — un elemento por cada parte mostrada (mismo índice que los botones Copiar).
+  // Se guarda ivIdx para poder propagar el monto editado a todas las partes de la misma intervención.
+  window._afipConceptos=conceptosFlat.map(function(c){return {concepto:c.texto,mo:mosPorIv[c.ivIdx]||0,ivIdx:c.ivIdx};});
   window._afipRegActual=reg;
   window._afipConceptoMat=tieneMats?armarConceptoMats(ivs,edif,fecha):'';
 
@@ -1633,7 +1666,12 @@ function actualizarMoIv(i){
     var dMo=parseFloat(reg['Descuento MO']||reg['Descuento_MO']||0)||0;
     netoEl.textContent='$'+(dMo>0?Math.round(val*(1-dMo/100)):val).toLocaleString('es-AR');
   }
-  if(window._afipConceptos&&window._afipConceptos[i])window._afipConceptos[i].mo=val;
+  // i es el índice de INTERVENCIÓN (ivIdx), no de parte — actualizar el monto en
+  // todas las partes (flat entries) que pertenezcan a esta misma intervención,
+  // para que copiar cualquier parte refleje el monto editado.
+  if(window._afipConceptos){
+    window._afipConceptos.forEach(function(c){if(c.ivIdx===i)c.mo=val;});
+  }
 }
 
 function copiarConcepto(idx){
