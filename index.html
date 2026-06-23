@@ -438,7 +438,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.21</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.22</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -3127,9 +3127,14 @@ function abrirFacturacion(item){
       }
       ivsMO.forEach(function(iv,i){
         numC++;
-        var concepto=armarConceptoMO(iv,item.edificio,fechaSola);
+        var partes=armarConceptoMOPartes(iv,item.edificio,fechaSola);
         var monto=mosPorIv[i]||0;
-        body.appendChild(mkCard(mkBloques(item.id+'-v'+vi+'-iv'+i,'🛠️ Concepto '+numC+' — Visita '+(vi+1),concepto,'var(--azul)',monto,'MO')));
+        partes.forEach(function(txt,pIdx){
+          var titulo='🛠️ Concepto '+numC+' — Visita '+(vi+1)+(partes.length>1?' (parte '+(pIdx+1)+'/'+partes.length+')':'');
+          // El monto se muestra en cada parte como referencia (es el monto de la intervención completa,
+          // no se duplica al facturar — en AFIP solo se carga una vez aunque el texto ocupe 2 renglones).
+          body.appendChild(mkCard(mkBloques(item.id+'-v'+vi+'-iv'+i+'-p'+pIdx,titulo,txt,'var(--azul)',monto,'MO')));
+        });
       });
     });
     // Materiales consolidados (combina JSON de MateriasExtra + texto "MATERIALES:" en Intervenciones)
