@@ -438,7 +438,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.19</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.20</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -3072,16 +3072,27 @@ function abrirFacturacion(item){
     body.appendChild(mkCard(mkBloques(item.id+'-c','🛠️ Concepto',concepto,'var(--verde)',item.monto,'Monto abono')));
 
   } else if(item.tipo==='mats'){
-    // Visitas → conceptos MO $0
+    // Visitas → un concepto por cada intervención, con su monto real (igual criterio
+    // que abrirAfip: usa precio_aprobado de MO_Data si está, o recalcula desde catálogo).
+    // El monto puede ser $0, 50%, o el valor completo según lo que Ali haya aprobado —
+    // se muestra tal cual está guardado, nunca se fuerza a $0.
     var numC=0;
     item.regs.forEach(function(r,vi){
-      numC++;
-      var cab=r.Fecha.split('T')[0].split('-').reverse().join('/')+' · '+(r.Hora||'').substring(0,5)+'hs'+(r.HoraFin?' a '+r.HoraFin.substring(0,5)+'hs':'');
-      var desc=limpiarMO(r.Intervenciones||'');
-      var lineas=desc.split('\n').filter(function(l){return l.trim();});
-      var descNum=lineas.map(function(l,i){return (i+1)+'. '+l;}).join('\n');
-      var texto=cab+(descNum?'\n'+descNum:'');
-      body.appendChild(mkCard(mkBloques(item.id+'-v'+vi,'🛠️ Concepto '+numC+' — Visita '+(vi+1),texto,'var(--azul)',0,'MO (abono)')));
+      var fechaSola=r.Fecha.split('T')[0].split('-').reverse().join('/');
+      var ivsR=parsearInterv(r.Intervenciones||'');
+      var ivsMO=ivsR.filter(function(iv){return !iv.esMats;});
+      var mosPorIv=calcMODesdeData(r['MO_Data']||r.MO_Data||'');
+      // Si no hay MO_Data utilizable, repartir el Monto MO total del registro en la primera intervención (igual fallback que abrirAfip)
+      if(!mosPorIv.length||mosPorIv.every(function(v){return v===0;})){
+        var moTotalReg=parseFloat(r['Monto MO'])||0;
+        mosPorIv=ivsMO.map(function(_,i){return i===0?moTotalReg:0;});
+      }
+      ivsMO.forEach(function(iv,i){
+        numC++;
+        var concepto=armarConceptoMO(iv,item.edificio,fechaSola);
+        var monto=mosPorIv[i]||0;
+        body.appendChild(mkCard(mkBloques(item.id+'-v'+vi+'-iv'+i,'🛠️ Concepto '+numC+' — Visita '+(vi+1),concepto,'var(--azul)',monto,'MO')));
+      });
     });
     // Materiales consolidados (combina JSON de MateriasExtra + texto "MATERIALES:" en Intervenciones)
     var matsTodos={};
