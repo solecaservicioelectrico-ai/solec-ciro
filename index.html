@@ -3526,8 +3526,7 @@ function p3MostrarDetalleHistorial(h,regsCompletos,itemsGuardados){
         var fecha=String(r.Fecha||'').split('T')[0].split('-').reverse().join('/');
         var hora=r.Hora?String(r.Hora).substring(0,5)+'hs':'';
         var desc=cLimpiarMO?cLimpiarMO(String(r.Intervenciones||r.Observaciones||'').trim()):String(r.Intervenciones||'');
-        var lineas=desc.split('
-').filter(function(l){return l.trim();});
+        var lineas=desc.split('\n').filter(function(l){return l.trim();});
         var moMonto=parseFloat(r['Monto MO']||0)||0;
         var matMonto=parseFloat(r['Monto Materiales']||0)||0;
 
