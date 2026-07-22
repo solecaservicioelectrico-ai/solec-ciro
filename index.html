@@ -452,7 +452,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.34</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.35</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -3336,20 +3336,70 @@ function p3MostrarHistorial(){
         return;
       }
       rows.sort(function(a,b){return (b.Generado||'')>(a.Generado||'')?1:-1;});
-      body.innerHTML=rows.map(function(h){
+      var fmtN=function(n){return Math.round(n||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');};
+      body.innerHTML=rows.map(function(h,i){
         var dsd=(h.Desde||'').split('-').reverse().join('/');
         var hst=(h.Hasta||'').split('-').reverse().join('/');
         var gen=h.Generado?new Date(h.Generado).toLocaleDateString('es-AR'):'—';
-        var fmtN=function(n){return Math.round(n||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');};
-        return '<div style="background:var(--s2);border:1px solid var(--borde);border-radius:10px;padding:14px;margin-bottom:10px">'
-          +'<div style="display:flex;justify-content:space-between;align-items:flex-start">'
+        // Contar estados desde Items si está disponible
+        var items=[];try{items=JSON.parse(h.Items||'[]');}catch(e){}
+        var facturadosCnt=items.filter(function(it){return it.Estado==='Facturado';}).length;
+        var pendientesCnt=items.length-facturadosCnt;
+        var estadoTxt=items.length>0
+          ?('<span style="color:var(--verde);font-weight:700">'+facturadosCnt+' facturadas</span> · <span style="color:var(--am)">'+pendientesCnt+' pendientes</span>')
+          :(h.Boletas+' boletas');
+        return '<div style="background:var(--s2);border:1px solid var(--borde);border-radius:10px;padding:14px;margin-bottom:10px;cursor:pointer" onclick="p3CargarHistorial('+i+')" data-hist-idx="'+i+'">'
+          +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
           +'<div><div style="font-size:15px;font-weight:900;color:var(--am)">'+dsd+' → '+hst+'</div>'
-          +'<div style="font-size:11px;color:var(--t3);margin-top:2px">'+gen+' · '+h.Boletas+' boletas</div></div>'
+          +'<div style="font-size:11px;color:var(--t3);margin-top:2px">'+gen+'</div>'
+          +'<div style="font-size:11px;margin-top:4px">'+estadoTxt+'</div></div>'
+          +'<div style="text-align:right;flex-shrink:0">'
           +'<div style="font-size:18px;font-weight:900;color:var(--verde)">$'+fmtN(h.Total)+'</div>'
-          +'</div></div>';
+          +'<div style="font-size:10px;color:var(--azul);font-weight:700;margin-top:4px">Tocar para ver →</div>'
+          +'</div></div></div>';
       }).join('');
+      // Guardar filas en variable global para acceso desde p3CargarHistorial
+      window._historialRows=rows;
     })
     .catch(function(){body.innerHTML='<div style="color:var(--rojo);font-size:13px;text-align:center;padding:20px">Error al cargar historial</div>';});
+}
+
+// Cargar un período del historial en el checklist p3
+function p3CargarHistorial(idx){
+  var rows=window._historialRows||[];
+  var h=rows[idx];
+  if(!h){showToast('No se encontró el período');return;}
+  var items=[];
+  try{items=JSON.parse(h.Items||'[]');}catch(e){}
+  if(!items.length){showToast('Este período no tiene detalle guardado');return;}
+
+  // Cerrar modal historial
+  document.getElementById('p3-historial-modal').style.display='none';
+
+  // Restaurar estados facturados
+  facturados={};
+  items.forEach(function(it){if(it.Estado==='Facturado')facturados[it.id]=true;});
+
+  // Reconstruir CK desde los items guardados
+  CK={abonos:[],mats:[],parts:[]};
+  items.forEach(function(it){
+    var obj={id:it.id,nombre:it.Nombre_Boleta||it.nombre||it.id,
+      edificio:it.Edificio||it.edificio||'',
+      monto:parseFloat(it.Monto||it.monto)||0,
+      tipo:it.Tipo||it.tipo||'abono'};
+    if(obj.tipo==='abono'||obj.tipo==='Abono MO')CK.abonos.push(obj);
+    else if(obj.tipo==='mats'||obj.tipo==='Materiales Abono')CK.mats.push(obj);
+    else CK.parts.push(obj);
+  });
+
+  // Actualizar variables de período
+  DESDE=h.Desde||'';HASTA=h.Hasta||'';
+
+  // Renderizar p3 y navegar
+  _consolidadoActivo=true;
+  renderP3();
+  ir('p3');
+  showToast('Período '+((h.Desde||'').split('-').reverse().join('/'))+' → '+((h.Hasta||'').split('-').reverse().join('/'))+' cargado');
 }
 
 // ── MARCAR FACTURADO ──
