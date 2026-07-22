@@ -325,11 +325,25 @@ body{background:var(--bg);color:var(--t);font-family:'DM Sans',sans-serif;min-he
 }
 
 @media print {
-  .nav, .topbar, .filtros, .stats-bar, #secRegistros, #secStock, #secConsolidar, #ck-paso1, .afip-modal, #toast, #pinScreen, #modalOverlay { display: none !important; }
-  #secChecklist, #ck-resultado { display: block !important; }
-  body { background: white !important; color: black !important; }
-  .content { padding: 0 !important; }
-  #ckitem-ab0, #ckitem-mat0, #ckitem-tr0 { border-color: #ccc !important; }
+  /* Ocultar todo lo que no es el checklist imprimible */
+  .nav, .topbar, .filtros, .stats-bar, #secRegistros, #secStock, #secConsolidar,
+  #ck-paso1, .afip-modal, #toast, #pinScreen, #modalOverlay,
+  #ck-resultado { display: none !important; }
+  /* Solo mostrar el área de impresión */
+  #ck-print-area { display: block !important; }
+  body, html { background: white !important; color: black !important; margin: 0; padding: 0; }
+  #ck-print-area { padding: 16px; font-family: Arial, sans-serif; color: #000; }
+  .ck-print-header { margin-bottom: 16px; border-bottom: 2px solid #000; padding-bottom: 8px; }
+  .ck-print-title { font-size: 20px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; }
+  .ck-print-sub { font-size: 12px; color: #444; margin-top: 2px; }
+  .ck-print-totales { display: flex; gap: 20px; margin-bottom: 14px; font-size: 12px; font-weight: 700; }
+  .ck-print-sec-title { font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin: 14px 0 6px; border-left: 4px solid #000; padding-left: 8px; }
+  .ck-print-item { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 1px solid #ddd; break-inside: avoid; }
+  .ck-print-box { width: 18px; height: 18px; border: 2px solid #000; border-radius: 3px; flex-shrink: 0; margin-top: 1px; }
+  .ck-print-info { flex: 1; min-width: 0; }
+  .ck-print-nombre { font-size: 13px; font-weight: 800; }
+  .ck-print-detalle { font-size: 11px; color: #555; margin-top: 1px; }
+  .ck-print-monto { font-size: 14px; font-weight: 900; text-align: right; flex-shrink: 0; min-width: 80px; }
 }
 
 :root{--bg:#0f1015;--s1:#161820;--s2:#1e2130;--s3:#272b40;--borde:#4a5278;--am:#f5c518;--verde:#00c896;--rojo:#ff4757;--azul:#4a9eff;--naranja:#ff8c42;--t:#fff;--t2:#dde4ff;--t3:#9aa5c8;--r:12px;--rs:8px;}
@@ -438,7 +452,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.22</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.23</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -709,7 +723,8 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
         </div>
         <div style="display:flex;gap:8px">
           <div onclick="ckVolverPaso1()" style="background:var(--s3);border:1px solid var(--borde);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:800;color:var(--t3);cursor:pointer">← Nuevo período</div>
-          <div onclick="window.print()" style="background:var(--azul);border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:800;color:#fff;cursor:pointer">🖨️ Imprimir</div>
+          <div onclick="ckMostrarHistorial()" style="background:var(--s3);border:1px solid var(--borde);border-radius:8px;padding:8px 12px;font-size:13px;font-weight:800;color:var(--am);cursor:pointer">📋 Historial</div>
+          <div onclick="ckImprimir()" style="background:var(--azul);border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:800;color:#fff;cursor:pointer">🖨️ Imprimir</div>
         </div>
       </div>
 
@@ -741,6 +756,20 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
         <div id="ck-lista-trabajos" style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px"></div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- Área de impresión — solo visible al imprimir, generada por ckImprimir() -->
+  <div id="ck-print-area" style="display:none"></div>
+
+  <!-- Modal historial de consolidados -->
+  <div id="ck-historial-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:999;padding:16px;overflow-y:auto">
+    <div style="background:var(--s1);border:1px solid var(--borde);border-radius:14px;max-width:480px;margin:0 auto;padding:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:2px;color:var(--am)">📋 Historial de consolidados</div>
+        <div onclick="document.getElementById('ck-historial-modal').style.display='none'" style="cursor:pointer;font-size:22px;color:var(--t3)">✕</div>
+      </div>
+      <div id="ck-historial-body"></div>
     </div>
   </div>
 
@@ -2526,11 +2555,21 @@ function cGuardarChecklist(porEdif,desde,hasta){
       items.push({ID:'mat-'+edif,Periodo_Desde:desde,Periodo_Hasta:hasta,Nombre_Boleta:nombreMat,Edificio:edif,Tipo:'Materiales Abono',Descripcion:'Materiales período',Monto:totalMats,Estado:'Pendiente'});
     }
   });
-  // Guardar en memoria del navegador
+  // Guardar en localStorage (persiste entre sesiones) y agregar al historial
   try{
     var key='ck_'+desde+'_'+hasta;
-    sessionStorage.setItem(key,JSON.stringify(items));
-    sessionStorage.setItem('ck_ultimo_periodo',JSON.stringify({desde:desde,hasta:hasta}));
+    localStorage.setItem(key,JSON.stringify(items));
+    localStorage.setItem('ck_ultimo_periodo',JSON.stringify({desde:desde,hasta:hasta}));
+    // Historial de consolidados: guardar resumen de cada período generado
+    var hist=JSON.parse(localStorage.getItem('ck_historial')||'[]');
+    var totalHist=items.reduce(function(s,i){return s+(parseFloat(i.Monto)||0);},0);
+    // Actualizar si ya existe ese período, agregar si no
+    var idx=hist.findIndex(function(h){return h.desde===desde&&h.hasta===hasta;});
+    var entrada={desde:desde,hasta:hasta,generado:new Date().toISOString(),total:totalHist,boletas:items.length};
+    if(idx>=0)hist[idx]=entrada;else hist.unshift(entrada);
+    // Mantener solo los últimos 24 consolidados
+    hist=hist.slice(0,24);
+    localStorage.setItem('ck_historial',JSON.stringify(hist));
     console.log('Checklist en memoria: '+items.length+' ítems');
   }catch(e){console.error('Error guardando checklist:',e);}
 }
@@ -2550,7 +2589,7 @@ async function ckBuscar(){
     // Leer items del consolidador en memoria
     var key='ck_'+desde+'_'+hasta;
     var saved=null;
-    try{saved=sessionStorage.getItem(key);}catch(e){}
+    try{saved=localStorage.getItem(key);}catch(e){}
     ckState.ckItems=saved?JSON.parse(saved):[];
     ckChecked={};
     ckState.ckItems.forEach(function(item){ckChecked[item.ID]=item.Estado==='Facturado';});
@@ -2657,16 +2696,118 @@ function ckToggle(id,color){ckChecked[id]=!ckChecked[id];var ch=ckChecked[id];va
 
 function ckGuardarEstado(id,facturado){
   try{
-    // Actualizar en memoria
-    var ul=sessionStorage.getItem('ck_ultimo_periodo');
+    var ul=localStorage.getItem('ck_ultimo_periodo');
     if(!ul)return;
     var p=JSON.parse(ul);
     var key='ck_'+p.desde+'_'+p.hasta;
-    var items=JSON.parse(sessionStorage.getItem(key)||'[]');
+    var items=JSON.parse(localStorage.getItem(key)||'[]');
     items.forEach(function(item){if(item.ID===id)item.Estado=facturado?'Facturado':'Pendiente';});
-    sessionStorage.setItem(key,JSON.stringify(items));
+    localStorage.setItem(key,JSON.stringify(items));
   }catch(e){console.error('Error guardando estado:',e);}
 }
+
+// ── IMPRIMIR CHECKLIST ──
+// Genera una página limpia en blanco/negro con casilleros para tachar a mano,
+// separada por sección (Abonos, Materiales, Particulares), con monto de cada ítem.
+function ckImprimir(){
+  var periodo=document.getElementById('ck-periodo-label').textContent||'—';
+  var totEl=document.getElementById('ck-resumen-totales');
+  // Recopilar ítems de cada sección del DOM actual
+  function recopilarItems(listaId){
+    var out=[];
+    var lista=document.getElementById(listaId);
+    if(!lista)return out;
+    var divs=lista.querySelectorAll('[id^="ckitem-"]');
+    divs.forEach(function(d){
+      var id=d.id.replace('ckitem-','');
+      var facturado=ckChecked[id]||false;
+      var titulo=d.querySelector('div:nth-child(2) div:first-child');
+      var sub=d.querySelector('div:nth-child(2) div:nth-child(2)');
+      var monto=d.querySelector('div:nth-child(3) div:first-child');
+      out.push({
+        nombre:titulo?titulo.textContent:'',
+        sub:sub?sub.textContent:'',
+        monto:monto?monto.textContent:'',
+        facturado:facturado
+      });
+    });
+    return out;
+  }
+  var abonos=recopilarItems('ck-lista-abonos');
+  var mats=recopilarItems('ck-lista-mats');
+  var trabajos=recopilarItems('ck-lista-trabajos');
+
+  function renderSec(titulo,items){
+    if(!items.length)return '';
+    var html='<div class="ck-print-sec-title">'+titulo+'</div>';
+    items.forEach(function(it){
+      var tachado=it.facturado?'text-decoration:line-through;color:#aaa;':'';
+      html+=
+        '<div class="ck-print-item" style="'+tachado+'">'+
+          '<div class="ck-print-box">'+(it.facturado?'✓':'')+'</div>'+
+          '<div class="ck-print-info">'+
+            '<div class="ck-print-nombre">'+it.nombre+'</div>'+
+            (it.sub?'<div class="ck-print-detalle">'+it.sub+'</div>':'')+
+          '</div>'+
+          '<div class="ck-print-monto">'+it.monto+'</div>'+
+        '</div>';
+    });
+    return html;
+  }
+
+  var area=document.getElementById('ck-print-area');
+  area.innerHTML=
+    '<div class="ck-print-header">'+
+      '<div class="ck-print-title">SOLEC — Checklist de facturación</div>'+
+      '<div class="ck-print-sub">Período: '+periodo+' · Impreso: '+new Date().toLocaleDateString('es-AR')+'</div>'+
+    '</div>'+
+    renderSec('🏢 Abonos mensuales',abonos)+
+    renderSec('📦 Materiales de abono',mats)+
+    renderSec('⚡ Trabajos particulares',trabajos);
+
+  window.print();
+}
+
+// ── HISTORIAL DE CONSOLIDADOS ──
+function ckMostrarHistorial(){
+  var hist=[];
+  try{hist=JSON.parse(localStorage.getItem('ck_historial')||'[]');}catch(e){}
+  var body=document.getElementById('ck-historial-body');
+  if(!hist.length){
+    body.innerHTML='<div style="color:var(--t3);font-size:13px;text-align:center;padding:20px">Todavía no hay consolidados guardados.<br>Generá un checklist y quedará registrado acá.</div>';
+  }else{
+    body.innerHTML=hist.map(function(h,i){
+      var desde=h.desde.split('-').reverse().join('/');
+      var hasta=h.hasta.split('-').reverse().join('/');
+      var gen=h.generado?new Date(h.generado).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
+      var fmt=function(n){return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');};
+      return '<div style="background:var(--s2);border:1px solid var(--borde);border-radius:10px;padding:14px;margin-bottom:10px;cursor:pointer" onclick="ckCargarPeriodo(\''+h.desde+'\',\''+h.hasta+'\')">'+
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'+
+          '<div>'+
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;letter-spacing:1px;color:var(--am)">'+desde+' → '+hasta+'</div>'+
+            '<div style="font-size:11px;color:var(--t3);font-weight:600;margin-top:2px">Generado: '+gen+'</div>'+
+          '</div>'+
+          '<div style="text-align:right">'+
+            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--verde)">$'+fmt(h.total||0)+'</div>'+
+            '<div style="font-size:10px;color:var(--t3);font-weight:700">'+h.boletas+' boletas</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="margin-top:8px;font-size:11px;color:var(--azul);font-weight:700">Tocar para cargar este período →</div>'+
+      '</div>';
+    }).join('');
+  }
+  document.getElementById('ck-historial-modal').style.display='block';
+}
+
+// Carga un período guardado en el historial directo en el checklist
+function ckCargarPeriodo(desde,hasta){
+  document.getElementById('ck-historial-modal').style.display='none';
+  document.getElementById('ckDesde').value=desde;
+  document.getElementById('ckHasta').value=hasta;
+  ckBuscar();
+}
+
+
 
 
 
