@@ -452,7 +452,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.35</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.36</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -635,6 +635,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
       <div class="atajo" onclick="setAtajo('30')">Últimos 30 días</div>
     </div>
     <button class="btn-am" onclick="irP2()">Buscar registros →</button>
+    <button onclick="p3MostrarHistorial()" style="width:100%;background:var(--s3);border:1px solid var(--borde);border-radius:var(--rs);padding:13px;color:var(--am);font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;cursor:pointer;margin-top:0">📋 Ver historial de consolidados</button>
   </div>
 </div>
 
@@ -818,6 +819,20 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
       <button id="afip-btn-facturado" onclick="afipMarcarFacturado()" style="width:100%;background:var(--verde);border:none;border-radius:8px;padding:12px;color:#000;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:1px;cursor:pointer">✓ Marcar como facturado</button>
     </div>
     <button class="btn-cerrar-afip" onclick="document.getElementById('afipModal').classList.remove('on')" style="margin-top:8px;">Cerrar</button>
+  </div>
+</div>
+
+<!-- Modal detalle de un consolidado histórico (solo consulta) -->
+<div id="p3-hist-detalle-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:2002;padding:0;overflow-y:auto">
+  <div style="background:var(--s1);min-height:100vh;max-width:480px;margin:0 auto;padding:16px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:8px">
+      <div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--am)">📋 Detalle del período</div>
+        <div id="p3-hist-detalle-tit" style="font-size:12px;color:var(--t3);margin-top:2px;font-weight:600">—</div>
+      </div>
+      <div onclick="document.getElementById('p3-hist-detalle-modal').style.display='none';document.getElementById('p3-historial-modal').style.display='block';" style="cursor:pointer;background:var(--s3);border:1px solid var(--borde);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:800;color:var(--t3)">← Volver</div>
+    </div>
+    <div id="p3-hist-detalle-body"></div>
   </div>
 </div>
 
@@ -3373,33 +3388,62 @@ function p3CargarHistorial(idx){
   try{items=JSON.parse(h.Items||'[]');}catch(e){}
   if(!items.length){showToast('Este período no tiene detalle guardado');return;}
 
-  // Cerrar modal historial
   document.getElementById('p3-historial-modal').style.display='none';
 
-  // Restaurar estados facturados
-  facturados={};
-  items.forEach(function(it){if(it.Estado==='Facturado')facturados[it.id]=true;});
+  // Mostrar en modal de detalle histórico
+  var modal=document.getElementById('p3-hist-detalle-modal');
+  var body=document.getElementById('p3-hist-detalle-body');
+  var tit=document.getElementById('p3-hist-detalle-tit');
+  if(!modal){showToast('Error: modal no encontrado');return;}
 
-  // Reconstruir CK desde los items guardados
-  CK={abonos:[],mats:[],parts:[]};
-  items.forEach(function(it){
-    var obj={id:it.id,nombre:it.Nombre_Boleta||it.nombre||it.id,
-      edificio:it.Edificio||it.edificio||'',
-      monto:parseFloat(it.Monto||it.monto)||0,
-      tipo:it.Tipo||it.tipo||'abono'};
-    if(obj.tipo==='abono'||obj.tipo==='Abono MO')CK.abonos.push(obj);
-    else if(obj.tipo==='mats'||obj.tipo==='Materiales Abono')CK.mats.push(obj);
-    else CK.parts.push(obj);
-  });
+  var dsd=(h.Desde||'').split('-').reverse().join('/');
+  var hst=(h.Hasta||'').split('-').reverse().join('/');
+  var gen=h.Generado?new Date(h.Generado).toLocaleDateString('es-AR'):'—';
+  tit.textContent=dsd+' → '+hst+' · '+gen;
 
-  // Actualizar variables de período
-  DESDE=h.Desde||'';HASTA=h.Hasta||'';
+  var fmtN=function(n){return Math.round(n||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');};
 
-  // Renderizar p3 y navegar
-  _consolidadoActivo=true;
-  renderP3();
-  ir('p3');
-  showToast('Período '+((h.Desde||'').split('-').reverse().join('/'))+' → '+((h.Hasta||'').split('-').reverse().join('/'))+' cargado');
+  // Agrupar por tipo
+  var ab=items.filter(function(it){var t=it.Tipo||it.tipo||'';return t==='abono'||t==='Abono MO';});
+  var mt=items.filter(function(it){var t=it.Tipo||it.tipo||'';return t==='mats'||t==='Materiales Abono';});
+  var pt=items.filter(function(it){var t=it.Tipo||it.tipo||'';return t!=='abono'&&t!=='Abono MO'&&t!=='mats'&&t!=='Materiales Abono';});
+
+  var totalFact=items.filter(function(it){return it.Estado==='Facturado';}).length;
+  var totalPend=items.length-totalFact;
+  var totalMonto=items.reduce(function(s,it){return s+(parseFloat(it.Monto||it.monto)||0);},0);
+
+  function renderSecHist(titulo,color,arr){
+    if(!arr.length)return '';
+    var h2='<div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:'+color+';margin:16px 0 8px;border-left:4px solid '+color+';padding-left:8px">'+titulo+'</div>';
+    arr.forEach(function(it){
+      var fact=it.Estado==='Facturado';
+      var monto=parseFloat(it.Monto||it.monto)||0;
+      h2+='<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--s2);border:1px solid var(--borde);border-left:3px solid '+color+';border-radius:8px;margin-bottom:6px'+(fact?';opacity:0.6':'')+'">'+
+        '<div style="width:20px;height:20px;border:2px solid '+color+';border-radius:4px;background:'+(fact?color:'transparent')+';flex-shrink:0;display:flex;align-items:center;justify-content:center">'+
+        (fact?'<span style="color:#000;font-size:11px;font-weight:900">✓</span>':'')+
+        '</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:12px;font-weight:800;color:var(--t)'+(fact?';text-decoration:line-through':'')+'">'+
+            (it.Nombre_Boleta||it.nombre||it.id)+'</div>'+
+          '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+(it.Edificio||it.edificio||'')+'</div>'+
+        '</div>'+
+        '<div style="font-size:14px;font-weight:900;color:'+color+';white-space:nowrap">$'+fmtN(monto)+'</div>'+
+      '</div>';
+    });
+    return h2;
+  }
+
+  body.innerHTML=
+    '<div style="background:var(--s2);border:1px solid var(--borde);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;gap:16px;flex-wrap:wrap">'+
+      '<span style="font-size:12px;font-weight:700;color:var(--verde)">✓ '+totalFact+' facturadas</span>'+
+      '<span style="font-size:12px;font-weight:700;color:var(--am)">⏳ '+totalPend+' pendientes</span>'+
+      '<span style="font-size:12px;font-weight:700;color:var(--t);margin-left:auto">Total: $'+fmtN(totalMonto)+'</span>'+
+    '</div>'+
+    renderSecHist('🏢 Abonos mensuales','var(--verde)',ab)+
+    renderSecHist('📦 Materiales de abono','var(--am)',mt)+
+    renderSecHist('⚡ Trabajos particulares','var(--azul)',pt);
+
+  modal.style.display='block';
 }
 
 // ── MARCAR FACTURADO ──
