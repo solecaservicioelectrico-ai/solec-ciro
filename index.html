@@ -452,7 +452,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.29</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.30</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -2545,18 +2545,21 @@ function cAgregarChecklist(body, porEdif, desde, hasta) {
 function cGuardarChecklist(porEdif,desde,hasta){
   var items=[];
   var ts=new Date().toISOString();
+  var _mesesCK=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  var _normCK=function(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9\s]/g,'').trim().replace(/\s+/g,'-');};
+  var _nomCK=function(edif,fecha){var p=(fecha||hasta).split('T')[0].split('-');return (_mesesCK[parseInt(p[1])-1]||p[1])+'-'+p[0]+'-'+_normCK(edif)+'-preventivo';};
   Object.keys(porEdif).sort().forEach(function(edif){
     var regs=porEdif[edif];
     // Una boleta por visita (MO)
     regs.forEach(function(r){
-      var nombre=ckGenerarNombre(edif,'Preventivo/Abono',String(r.Fecha||'').split('T')[0],false);
+      var nombre=_nomCK(edif,String(r.Fecha||'').split('T')[0]);
       var moMonto=parseFloat(r['Monto MO'])||0;
       items.push({ID:'ab-'+edif+'-'+String(r.Fecha||'').split('T')[0],Periodo_Desde:desde,Periodo_Hasta:hasta,Nombre_Boleta:nombre,Edificio:edif,Tipo:'Abono MO',Descripcion:'Visita '+String(r.Fecha||'').split('T')[0].split('-').reverse().join('/'),Monto:moMonto,Estado:'Pendiente'});
     });
     // Una boleta por edificio (materiales)
     var totalMats=regs.reduce(function(s,r){return s+(parseFloat(r['Monto Materiales'])||0);},0);
     if(totalMats>0){
-      var nombreMat=ckGenerarNombre(edif,'Preventivo/Abono',regs[0].Fecha||desde,true);
+      var nombreMat=_nomCK(edif,regs[0].Fecha||desde)+'-mats';
       items.push({ID:'mat-'+edif,Periodo_Desde:desde,Periodo_Hasta:hasta,Nombre_Boleta:nombreMat,Edificio:edif,Tipo:'Materiales Abono',Descripcion:'Materiales período',Monto:totalMats,Estado:'Pendiente'});
     }
   });
