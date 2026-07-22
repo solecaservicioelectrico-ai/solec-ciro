@@ -452,7 +452,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.30</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.32</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -461,7 +461,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     <button class="nav-btn on" onclick="showSec('registros',this)">📋 Registros</button>
     <button class="nav-btn" onclick="showSec('stock',this)">📦 Stock</button>
     <button class="nav-btn" onclick="showSec('consolidar',this)">🗂️ Consolidar</button>
-    <button class="nav-btn" onclick="showSec('checklist',this)">✅ Checklist</button>
+
 
   </div>
 
@@ -665,7 +665,10 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
       <div class="htit">✅ Checklist</div>
       <div class="hsub" id="p3-periodo">—</div>
     </div>
-    <div onclick="window.print()" style="background:var(--azul);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:800;color:#fff;cursor:pointer">🖨️</div>
+    <div style="display:flex;gap:6px">
+      <div onclick="p3MostrarHistorial()" style="background:var(--s3);border:1px solid var(--borde);border-radius:8px;padding:8px 10px;font-size:12px;font-weight:800;color:var(--am);cursor:pointer">📋</div>
+      <div onclick="p3Imprimir()" style="background:var(--azul);border-radius:8px;padding:8px 10px;font-size:12px;font-weight:800;color:#fff;cursor:pointer">🖨️</div>
+    </div>
   </div>
   <div class="scroll" id="p3-body"></div>
 </div>
@@ -809,6 +812,17 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
       </div>
     </div>
     <button class="btn-cerrar-afip" onclick="document.getElementById('afipModal').classList.remove('on')" style="margin-top:10px;">Cerrar</button>
+  </div>
+</div>
+
+<!-- Modal historial de consolidados (desde p3) -->
+<div id="p3-historial-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2001;padding:16px;overflow-y:auto">
+  <div style="background:var(--s1);border:1px solid var(--borde);border-radius:14px;max-width:480px;margin:0 auto;padding:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--am)">📋 Historial de consolidados</div>
+      <div onclick="document.getElementById('p3-historial-modal').style.display='none'" style="cursor:pointer;font-size:24px;color:var(--t3);padding:4px 8px">✕</div>
+    </div>
+    <div id="p3-historial-body"></div>
   </div>
 </div>
 
@@ -2370,6 +2384,10 @@ function calcMODesdeData(moDataStr){
 
 var cState={registros:[],edificios:[],catalogo:[],desde:'',hasta:'',seleccionados:{}};
 function cHoy(){return new Date().toISOString().split('T')[0];}
+// Variable global que indica si hay un consolidado activo en pantalla
+var _consolidadoActivo=false;
+var _checklistActivo=false;
+
 async function initConsolidar(){
   // Load data if not loaded yet
   if(!cState.edificios||!cState.edificios.length){
@@ -2397,13 +2415,8 @@ async function initConsolidar(){
     document.getElementById('inp-desde').value=new Date(h.getFullYear(),h.getMonth()-1,15).toISOString().split('T')[0];
     document.getElementById('inp-hasta').value=new Date().toISOString().split('T')[0];
   }
-  // Show first screen — pero solo si no hay un checklist activo ya visible
-  var ckActivo=false;
-  try{
-    var ul=localStorage.getItem('ck_ultimo_periodo');
-    if(ul){var p=JSON.parse(ul);ckActivo=(localStorage.getItem('ck_'+p.desde+'_'+p.hasta)||'[]')!=='[]';}
-  }catch(e){}
-  if(!ckActivo)ir('p1');
+  // Solo resetear a p1 si no hay un consolidado activo ya en pantalla
+  if(!_consolidadoActivo)ir('p1');
 }
 function initConsolidar_OLD(){if(!document.getElementById('cDesde').value){var h=new Date();document.getElementById('cDesde').value=new Date(h.getFullYear(),h.getMonth(),1).toISOString().split('T')[0];document.getElementById('cHasta').value=cHoy();}document.getElementById('consol-paso1').style.display='block';document.getElementById('consol-paso2').style.display='none';document.getElementById('consol-paso3').style.display='none';}
 function cSetAtajo(t){var h=new Date(),d,u=cHoy();if(t==='mes'){d=new Date(h.getFullYear(),h.getMonth(),1).toISOString().split('T')[0];}else if(t==='15'){d=new Date(h.getFullYear(),h.getMonth()-1,15).toISOString().split('T')[0];u=new Date(h.getFullYear(),h.getMonth(),15).toISOString().split('T')[0];}else{var x=new Date(h);x.setDate(x.getDate()-30);d=x.toISOString().split('T')[0];}document.getElementById('cDesde').value=d;document.getElementById('cHasta').value=u;}
@@ -2416,7 +2429,7 @@ function cToggleEdif(ek){var l=document.getElementById('cregs-'+ek);if(l)l.style
 function cToggleReg(edif,i,ek){var set=cState.seleccionados[edif];if(!set){cState.seleccionados[edif]=new Set();set=cState.seleccionados[edif];}var chk=document.getElementById('cchk-'+i);if(set.has(i)){set.delete(i);if(chk){chk.style.borderColor='var(--borde)';chk.style.background='transparent';chk.innerHTML='';}}else{set.add(i);if(chk){chk.style.borderColor='var(--verde)';chk.style.background='var(--verde)';chk.innerHTML='<span style="color:#000;font-size:13px;font-weight:900">✓</span>';}}cActualizarContador();var total=cState.registros.filter(function(r){return r.Edificio===edif;}).length;var hdr=document.getElementById('chdr-'+ek);if(hdr)hdr.style.borderLeftColor=set.size===total?'var(--verde)':set.size>0?'var(--am)':'var(--borde)';var cnt=document.getElementById('ccnt-'+ek);if(cnt)cnt.textContent=set.size+'/'+total+' seleccionados';var num=document.getElementById('cnum-'+ek);if(num)num.textContent=set.size;}
 function cSelTodos(on){cState.registros.forEach(function(r,i){if(!cState.seleccionados[r.Edificio])cState.seleccionados[r.Edificio]=new Set();if(on)cState.seleccionados[r.Edificio].add(i);else cState.seleccionados[r.Edificio].delete(i);var chk=document.getElementById('cchk-'+i);if(chk){chk.style.borderColor=on?'var(--verde)':'var(--borde)';chk.style.background=on?'var(--verde)':'transparent';chk.innerHTML=on?'<span style="color:#000;font-size:13px;font-weight:900">✓</span>':'';}});cActualizarContador();}
 function cActualizarContador(){var t=Object.values(cState.seleccionados).reduce(function(s,set){return s+set.size;},0);document.getElementById('cSelCount').textContent=t;}
-function cVolver1(){document.getElementById('consol-paso2').style.display='none';document.getElementById('consol-paso1').style.display='block';}
+function cVolver1(){_consolidadoActivo=false;document.getElementById('consol-paso2').style.display='none';document.getElementById('consol-paso1').style.display='block';}
 function cVolver2(){document.getElementById('consol-paso3').style.display='none';document.getElementById('consol-paso2').style.display='block';}
 function cGenerar(){var desde=cState.desde.split('-').reverse().join('/'),hasta=cState.hasta.split('-').reverse().join('/');document.getElementById('cConsolLabel').textContent=desde+' → '+hasta;var porEdif={};cState.registros.forEach(function(r,i){var edif=r.Edificio;if(!cState.seleccionados[edif]||!cState.seleccionados[edif].has(i))return;if(!porEdif[edif])porEdif[edif]=[];porEdif[edif].push(r);});var body=document.getElementById('cConsolBody');body.innerHTML='';if(Object.keys(porEdif).length===0){body.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">No hay registros seleccionados</div>';document.getElementById('consol-paso2').style.display='none';document.getElementById('consol-paso3').style.display='block';return;}Object.keys(porEdif).sort().forEach(function(edif){var regs=porEdif[edif].sort(function(a,b){return(a.Fecha||'')<(b.Fecha||'')?-1:1;});var ek=edif.replace(/[\s\/]/g,'_');var card=document.createElement('div');card.style.cssText='background:var(--s1);border:1px solid var(--borde);border-radius:12px;overflow:hidden';card.innerHTML='<div style="background:linear-gradient(135deg,#1e1d10,var(--s1));border-bottom:1px solid rgba(245,197,24,.3);padding:14px 16px"><div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;letter-spacing:2px;color:var(--am)">'+edif+'</div><div style="font-size:11px;color:var(--t3);font-weight:600;margin-top:2px">'+regs.length+' visita'+(regs.length>1?'s':'')+' · '+desde+' → '+hasta+'</div></div>';regs.forEach(function(r,vi){var vid=ek+'_v'+vi;var fecha=String(r.Fecha||'').split('T')[0].split('-').reverse().join('/');var hora=r.Hora?String(r.Hora).substring(0,5)+'hs':'';var horaf=r['Hora Fin']?' a '+String(r['Hora Fin']).substring(0,5)+'hs':'';var cab=fecha+(hora?' · '+hora+horaf:'');var desc=cLimpiarMO(String(r.Intervenciones||r.Observaciones||'').trim());var lineas=desc.split('\n').filter(function(l){return l.trim();});var descN=lineas.map(function(l,i){return(i+1)+'. '+l;}).join('\n');var txt=cab+(descN?'\n'+descN:'');var bl=document.createElement('div');bl.style.cssText='padding:12px 16px;border-top:1px solid rgba(74,82,120,.3)';bl.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--azul)">🛠️ Visita '+(vi+1)+' · '+fecha+'</div><div id="cbtn-v-'+vid+'" onclick="cCopiar(\'ctxt-v-'+vid+'\',\'cbtn-v-'+vid+'\')" style="background:rgba(74,158,255,.12);border:1px solid rgba(74,158,255,.3);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:800;color:var(--azul);cursor:pointer">Copiar</div></div><div id="ctxt-v-'+vid+'" style="background:var(--s2);border:1px solid var(--borde);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--t2);line-height:1.6;white-space:pre-wrap;font-family:\'Barlow\',sans-serif;font-weight:600">'+esc(txt)+'</div>';card.appendChild(bl);});var mt={};regs.forEach(function(r){var raw=r['Materiales Extra']||'';if(raw&&raw!=='[]'){try{var arr=JSON.parse(raw);if(Array.isArray(arr))arr.forEach(function(m){var nom=m.nombre||m.Nombre||'';var qty=parseInt(m.cantidad||m.qty||1)||1;var un=m.unidad||m.Unidad||'u';var pr=parseFloat(m.precio||m.Precio||0)||cGetPrecio(nom);if(!nom)return;if(!mt[nom])mt[nom]={qty:0,un:un,precio:pr};mt[nom].qty+=qty;if(pr&&!mt[nom].precio)mt[nom].precio=pr;});}catch(e){}}String(r.Intervenciones||'').split('||').forEach(function(p){var idx=p.indexOf('MATERIALES:');if(idx===-1)return;p.substring(idx+11).split(',').forEach(function(item){item=item.trim();if(!item)return;var m=item.match(/^(\d+)\s*([a-zA-Z]+)\s+(.+)$/);if(m){var qty=parseInt(m[1])||1,un=m[2],nom=m[3].trim();var pr=cGetPrecio(nom);if(!mt[nom])mt[nom]={qty:0,un:un,precio:pr};mt[nom].qty+=qty;}});});});var tot=0;var ml=Object.entries(mt).map(function(e){var nom=e[0],inf=e[1];var pu=inf.precio||0;var sub=Math.round(pu*inf.qty);tot+=sub;return '- '+inf.qty+' '+inf.un+' · '+nom+(pu>0?' — $'+cFmtPeso(pu)+' c/u = $'+cFmtPeso(sub):' — Sin precio');});// Si no hay precios calculados, usar Monto Materiales del registro
 if(tot===0){tot=regs.reduce(function(s,r){return s+(parseFloat(r['Monto Materiales'])||0);},0);}
@@ -2587,22 +2600,8 @@ function cGuardarChecklist(porEdif,desde,hasta){
 var ckState={edificios:[],registros:[],desde:'',hasta:''};
 var ckChecked={};
 function initChecklist(){
-  // Si hay un período activo guardado, restaurarlo directamente sin pasar por paso 1
-  try{
-    var ul=localStorage.getItem('ck_ultimo_periodo');
-    if(ul){
-      var p=JSON.parse(ul);
-      var key='ck_'+p.desde+'_'+p.hasta;
-      var items=localStorage.getItem(key);
-      if(items&&JSON.parse(items).length>0){
-        // Restaurar fechas y re-renderizar
-        document.getElementById('ckDesde').value=p.desde;
-        document.getElementById('ckHasta').value=p.hasta;
-        ckBuscar();
-        return;
-      }
-    }
-  }catch(e){}
+  // Si ya hay un checklist activo en memoria, no resetear
+  if(_checklistActivo)return;
   // Sin período activo: mostrar paso 1
   if(!document.getElementById('ckDesde').value){
     var h=new Date();
@@ -2613,7 +2612,7 @@ function initChecklist(){
   document.getElementById('ck-resultado').style.display='none';
 }
 function ckSetAtajo(t){var h=new Date(),d,u=new Date().toISOString().split('T')[0];if(t==='mes'){d=new Date(h.getFullYear(),h.getMonth(),1).toISOString().split('T')[0];}else if(t==='15'){d=new Date(h.getFullYear(),h.getMonth()-1,15).toISOString().split('T')[0];u=new Date(h.getFullYear(),h.getMonth(),15).toISOString().split('T')[0];}else{var x=new Date(h);x.setDate(x.getDate()-30);d=x.toISOString().split('T')[0];}document.getElementById('ckDesde').value=d;document.getElementById('ckHasta').value=u;}
-function ckVolverPaso1(){document.getElementById('ck-resultado').style.display='none';document.getElementById('ck-paso1').style.display='block';}
+function ckVolverPaso1(){_checklistActivo=false;document.getElementById('ck-resultado').style.display='none';document.getElementById('ck-paso1').style.display='block';}
 function ckFmt(n){if(!n||isNaN(n))return '0';return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
 async function ckBuscar(){
   var desde=document.getElementById('ckDesde').value,hasta=document.getElementById('ckHasta').value;
@@ -2654,6 +2653,7 @@ async function ckBuscar(){
     }
 
     ckRender();
+    _checklistActivo=true;
     document.getElementById('ck-paso1').style.display='none';
     document.getElementById('ck-resultado').style.display='block';
   }catch(e){
@@ -3167,6 +3167,7 @@ function generarChecklist(){
     }
   });
 
+  _consolidadoActivo=true;
   renderP3();
   ir('p3');
 }
@@ -3216,6 +3217,95 @@ function renderP3(){
   body.appendChild(mkSec('🏢 Abonos mensuales','var(--verde)','badge-ab',CK.abonos,'ab'));
   if(CK.mats.length>0)body.appendChild(mkSec('📦 Materiales de abono','var(--am)','badge-mat',CK.mats,'mat'));
   if(CK.parts.length>0)body.appendChild(mkSec('⚡ Trabajos particulares','var(--azul)','badge-part',CK.parts,'part'));
+
+  // Guardar consolidado automáticamente en Sheet al llegar a p3
+  p3GuardarSheet();
+}
+
+// ── GUARDAR CONSOLIDADO EN SHEET ──
+function p3GuardarSheet(){
+  var todos=[].concat(CK.abonos,CK.mats,CK.parts);
+  var items=todos.map(function(item){
+    return {ID:item.id,Nombre_Boleta:item.nombre,Edificio:item.edificio||'',
+      Tipo:item.tipo,Monto:item.monto,Estado:facturados[item.id]?'Facturado':'Pendiente'};
+  });
+  var total=todos.reduce(function(s,i){return s+i.monto;},0);
+  var ckID='CK-'+DESDE+'_'+HASTA;
+  var payload={action:'upsert',sheet:'Consolidados',key:'ID',keyval:ckID,
+    data:{ID:ckID,Desde:DESDE,Hasta:HASTA,Generado:new Date().toISOString(),
+      Total:Math.round(total),Boletas:items.length,Items:JSON.stringify(items)}};
+  fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+    .then(function(r){return r.json();})
+    .then(function(j){if(j&&j.ok)console.log('✅ Consolidado guardado en Sheet: '+ckID);})
+    .catch(function(e){console.error('Error guardando consolidado:',e);});
+}
+
+// ── IMPRIMIR DESDE P3 ──
+function p3Imprimir(){
+  var todos=[].concat(CK.abonos,CK.mats,CK.parts);
+  var periodo=document.getElementById('p3-periodo').textContent||'—';
+  var total=todos.reduce(function(s,i){return s+i.monto;},0);
+  function renderSec(titulo,items){
+    if(!items.length)return '';
+    var h='<h3 style="font-size:13px;font-weight:900;text-transform:uppercase;border-left:4px solid #000;padding-left:8px;margin:16px 0 6px">'+titulo+'</h3>';
+    items.forEach(function(it){
+      var fact=facturados[it.id]||false;
+      var tach=fact?'text-decoration:line-through;color:#aaa;':'';
+      h+='<div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px solid #ddd;'+tach+'">'
+        +'<div style="width:18px;height:18px;border:2px solid #000;border-radius:3px;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;font-size:13px">'+(fact?'✓':'')+'</div>'
+        +'<div style="flex:1"><div style="font-size:13px;font-weight:800">'+it.nombre+'</div>'
+        +'<div style="font-size:11px;color:#555">'+(it.edificio||'')+(it.fecha?' · '+it.fecha:'')+'</div></div>'
+        +'<div style="font-size:14px;font-weight:900;white-space:nowrap">$'+fmt(it.monto)+'</div></div>';
+    });
+    return h;
+  }
+  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>SOLEC Checklist '+periodo+'</title>'
+    +'<style>body{font-family:Arial,sans-serif;padding:20px;color:#000;max-width:700px;margin:0 auto}'
+    +'@media print{button{display:none!important}}</style></head><body>'
+    +'<button onclick="window.print()" style="float:right;background:#1a73e8;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:14px;font-weight:700;cursor:pointer">🖨️ Imprimir</button>'
+    +'<h1 style="font-size:18px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin:0">SOLEC — Checklist de facturación</h1>'
+    +'<div style="font-size:12px;color:#444;margin:4px 0 12px">Período: '+periodo+' · Generado: '+new Date().toLocaleDateString('es-AR')+'</div>'
+    +'<div style="background:#f5f5f5;padding:10px 14px;border-radius:6px;margin-bottom:12px;font-size:13px;font-weight:700;display:flex;gap:20px">'
+    +'<span>🏢 Abonos: '+CK.abonos.length+'</span><span>📦 Mats: '+CK.mats.length+'</span><span>⚡ Particulares: '+CK.parts.length+'</span>'
+    +'<span style="margin-left:auto">Total: $'+fmt(total)+'</span></div>'
+    +renderSec('🏢 Abonos mensuales',CK.abonos)
+    +renderSec('📦 Materiales de abono',CK.mats)
+    +renderSec('⚡ Trabajos particulares',CK.parts)
+    +'</body></html>';
+  var w=window.open('','_blank');
+  if(w){w.document.write(html);w.document.close();}
+  else showToast('Permitir ventanas emergentes para imprimir');
+}
+
+// ── HISTORIAL DESDE P3 ──
+function p3MostrarHistorial(){
+  var modal=document.getElementById('p3-historial-modal');
+  var body=document.getElementById('p3-historial-body');
+  if(!modal||!body)return;
+  body.innerHTML='<div style="color:var(--t3);font-size:13px;text-align:center;padding:20px">Cargando...</div>';
+  modal.style.display='block';
+  fetch(API+'?sheet=Consolidados')
+    .then(function(r){return r.json();})
+    .then(function(rows){
+      if(!Array.isArray(rows)||!rows.length){
+        body.innerHTML='<div style="color:var(--t3);font-size:13px;text-align:center;padding:20px">No hay consolidados guardados todavía.</div>';
+        return;
+      }
+      rows.sort(function(a,b){return (b.Generado||'')>(a.Generado||'')?1:-1;});
+      body.innerHTML=rows.map(function(h){
+        var dsd=(h.Desde||'').split('-').reverse().join('/');
+        var hst=(h.Hasta||'').split('-').reverse().join('/');
+        var gen=h.Generado?new Date(h.Generado).toLocaleDateString('es-AR'):'—';
+        var fmtN=function(n){return Math.round(n||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');};
+        return '<div style="background:var(--s2);border:1px solid var(--borde);border-radius:10px;padding:14px;margin-bottom:10px">'
+          +'<div style="display:flex;justify-content:space-between;align-items:flex-start">'
+          +'<div><div style="font-size:15px;font-weight:900;color:var(--am)">'+dsd+' → '+hst+'</div>'
+          +'<div style="font-size:11px;color:var(--t3);margin-top:2px">'+gen+' · '+h.Boletas+' boletas</div></div>'
+          +'<div style="font-size:18px;font-weight:900;color:var(--verde)">$'+fmtN(h.Total)+'</div>'
+          +'</div></div>';
+      }).join('');
+    })
+    .catch(function(){body.innerHTML='<div style="color:var(--rojo);font-size:13px;text-align:center;padding:20px">Error al cargar historial</div>';});
 }
 
 // ── MARCAR FACTURADO ──
@@ -3232,6 +3322,8 @@ function marcarFacturado(id,btn){
     chk.style.background=!ya?color:'transparent';
     chk.innerHTML=!ya?'<span style="color:#000;font-size:12px;font-weight:900">✓</span>':'';
   }
+  // Sincronizar estado con Sheet (guarda el consolidado completo con estados actualizados)
+  p3GuardarSheet();
 }
 
 // ── PANTALLA FACTURACIÓN ──
