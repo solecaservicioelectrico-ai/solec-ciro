@@ -452,7 +452,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.27</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.28</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -2618,10 +2618,23 @@ async function ckBuscar(){
   ckState.desde=desde;ckState.hasta=hasta;
   var btn=document.getElementById('ckBtnBuscar');btn.textContent='Cargando...';btn.disabled=true;
   try{
-    // Leer items del consolidador en memoria
+    // Leer items desde Sheet Consolidados (fuente principal) con fallback a localStorage
     var key='ck_'+desde+'_'+hasta;
+    var ckID='CK-'+desde+'_'+hasta;
     var saved=null;
-    try{saved=localStorage.getItem(key);}catch(e){}
+    try{
+      var sheetRows=await fetch(API+'?sheet=Consolidados').then(function(r){return r.json();});
+      if(Array.isArray(sheetRows)){
+        var row=sheetRows.find(function(r){return r.ID===ckID;});
+        if(row&&row.Items){
+          saved=row.Items;
+          // Actualizar caché local
+          try{localStorage.setItem(key,saved);localStorage.setItem('ck_ultimo_periodo',JSON.stringify({desde:desde,hasta:hasta}));}catch(e){}
+        }
+      }
+    }catch(e){}
+    // Fallback a localStorage si el Sheet no respondió
+    if(!saved){try{saved=localStorage.getItem(key);}catch(e){}}
     ckState.ckItems=saved?JSON.parse(saved):[];
     ckChecked={};
     ckState.ckItems.forEach(function(item){ckChecked[item.ID]=item.Estado==='Facturado';});
@@ -2630,9 +2643,6 @@ async function ckBuscar(){
     if(ckState.ckItems.length===0){
       var rE=await fetch(API+'?sheet=Edificios').then(r=>r.json());
       ckState.edificios=Array.isArray(rE)?rE:[];
-    preciosConf=Array.isArray(rPC)?rPC:[];
-    catsDin=Array.isArray(rCC)?rCC:[];
-    catalogoMods=Array.isArray(rMods)?rMods:[];
       ckState.registros=[];
       showToast('No hay consolidado para ese período. Mostrando abonos base.');
     } else {
