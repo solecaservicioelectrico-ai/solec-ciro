@@ -452,7 +452,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.23</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.25</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -2576,7 +2576,32 @@ function cGuardarChecklist(porEdif,desde,hasta){
 
 var ckState={edificios:[],registros:[],desde:'',hasta:''};
 var ckChecked={};
-function initChecklist(){if(!document.getElementById('ckDesde').value){var h=new Date();document.getElementById('ckDesde').value=new Date(h.getFullYear(),h.getMonth(),1).toISOString().split('T')[0];document.getElementById('ckHasta').value=new Date().toISOString().split('T')[0];}document.getElementById('ck-paso1').style.display='block';document.getElementById('ck-resultado').style.display='none';}
+function initChecklist(){
+  // Si hay un período activo guardado, restaurarlo directamente sin pasar por paso 1
+  try{
+    var ul=localStorage.getItem('ck_ultimo_periodo');
+    if(ul){
+      var p=JSON.parse(ul);
+      var key='ck_'+p.desde+'_'+p.hasta;
+      var items=localStorage.getItem(key);
+      if(items&&JSON.parse(items).length>0){
+        // Restaurar fechas y re-renderizar
+        document.getElementById('ckDesde').value=p.desde;
+        document.getElementById('ckHasta').value=p.hasta;
+        ckBuscar();
+        return;
+      }
+    }
+  }catch(e){}
+  // Sin período activo: mostrar paso 1
+  if(!document.getElementById('ckDesde').value){
+    var h=new Date();
+    document.getElementById('ckDesde').value=new Date(h.getFullYear(),h.getMonth(),1).toISOString().split('T')[0];
+    document.getElementById('ckHasta').value=new Date().toISOString().split('T')[0];
+  }
+  document.getElementById('ck-paso1').style.display='block';
+  document.getElementById('ck-resultado').style.display='none';
+}
 function ckSetAtajo(t){var h=new Date(),d,u=new Date().toISOString().split('T')[0];if(t==='mes'){d=new Date(h.getFullYear(),h.getMonth(),1).toISOString().split('T')[0];}else if(t==='15'){d=new Date(h.getFullYear(),h.getMonth()-1,15).toISOString().split('T')[0];u=new Date(h.getFullYear(),h.getMonth(),15).toISOString().split('T')[0];}else{var x=new Date(h);x.setDate(x.getDate()-30);d=x.toISOString().split('T')[0];}document.getElementById('ckDesde').value=d;document.getElementById('ckHasta').value=u;}
 function ckVolverPaso1(){document.getElementById('ck-resultado').style.display='none';document.getElementById('ck-paso1').style.display='block';}
 function ckFmt(n){if(!n||isNaN(n))return '0';return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
@@ -2765,7 +2790,8 @@ function ckImprimir(){
     renderSec('📦 Materiales de abono',mats)+
     renderSec('⚡ Trabajos particulares',trabajos);
 
-  window.print();
+  // Delay para que el browser renderice el área antes de abrir el diálogo de impresión
+  setTimeout(function(){ window.print(); }, 300);
 }
 
 // ── HISTORIAL DE CONSOLIDADOS ──
