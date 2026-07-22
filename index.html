@@ -452,7 +452,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.37</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.38</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -2637,7 +2637,10 @@ function cGuardarChecklist(porEdif,desde,hasta){
   });
   // Guardar en Sheet Consolidados (persiste entre dispositivos y sesiones)
   var totalCK=items.reduce(function(s,i){return s+(parseFloat(i.Monto)||0);},0);
-  var ckID='CK-'+desde+'_'+hasta;
+  var _tsCK=new Date();
+  var _padCK=function(n){return n<10?'0'+n:n;};
+  var _stampCK=_tsCK.getFullYear()+''+_padCK(_tsCK.getMonth()+1)+''+_padCK(_tsCK.getDate())+'-'+_padCK(_tsCK.getHours())+''+_padCK(_tsCK.getMinutes());
+  var ckID='CK-'+desde+'_'+hasta+'_'+_stampCK;
   var ckPayload={action:'upsert',sheet:'Consolidados',key:'ID',keyval:ckID,
     data:{ID:ckID,Desde:desde,Hasta:hasta,Generado:new Date().toISOString(),
       Total:Math.round(totalCK),Boletas:items.length,Items:JSON.stringify(items)}};
@@ -3289,7 +3292,11 @@ function p3GuardarSheet(){
       Tipo:item.tipo,Monto:item.monto,Estado:facturados[item.id]?'Facturado':'Pendiente'};
   });
   var total=todos.reduce(function(s,i){return s+i.monto;},0);
-  var ckID='CK-'+DESDE+'_'+HASTA;
+  // ID único por generación: período + timestamp para evitar sobreescritura
+  var _ts=new Date();
+  var _pad=function(n){return n<10?'0'+n:n;};
+  var _stamp=_ts.getFullYear()+''+_pad(_ts.getMonth()+1)+''+_pad(_ts.getDate())+'-'+_pad(_ts.getHours())+''+_pad(_ts.getMinutes());
+  var ckID='CK-'+DESDE+'_'+HASTA+'_'+_stamp;
   // Códigos de registros seleccionados — para reproducir la selección exacta en el historial
   var codigos=[];
   if(cState&&cState.registros&&cState.seleccionados){
