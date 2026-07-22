@@ -452,7 +452,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.32</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.33</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -2582,7 +2582,7 @@ function cGuardarChecklist(porEdif,desde,hasta){
   var ckPayload={action:'upsert',sheet:'Consolidados',key:'ID',keyval:ckID,
     data:{ID:ckID,Desde:desde,Hasta:hasta,Generado:new Date().toISOString(),
       Total:Math.round(totalCK),Boletas:items.length,Items:JSON.stringify(items)}};
-  fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ckPayload)})
+  fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(ckPayload)})
     .then(function(r){return r.json();})
     .then(function(j){
       if(j&&j.ok){
@@ -2757,7 +2757,7 @@ function ckGuardarEstado(id,facturado){
     var ckID='CK-'+p.desde+'_'+p.hasta;
     var ckPayload={action:'upsert',sheet:'Consolidados',key:'ID',keyval:ckID,
       data:{ID:ckID,Desde:p.desde,Hasta:p.hasta,Items:JSON.stringify(items)}};
-    fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ckPayload)})
+    fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(ckPayload)})
       .catch(function(e){console.error('Error sync estado:',e);});
   }catch(e){console.error('Error guardando estado:',e);}
 }
@@ -3234,7 +3234,7 @@ function p3GuardarSheet(){
   var payload={action:'upsert',sheet:'Consolidados',key:'ID',keyval:ckID,
     data:{ID:ckID,Desde:DESDE,Hasta:HASTA,Generado:new Date().toISOString(),
       Total:Math.round(total),Boletas:items.length,Items:JSON.stringify(items)}};
-  fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+  fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)})
     .then(function(r){return r.json();})
     .then(function(j){if(j&&j.ok)console.log('✅ Consolidado guardado en Sheet: '+ckID);})
     .catch(function(e){console.error('Error guardando consolidado:',e);});
