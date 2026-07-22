@@ -452,7 +452,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.25</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.27</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -2397,8 +2397,13 @@ async function initConsolidar(){
     document.getElementById('inp-desde').value=new Date(h.getFullYear(),h.getMonth()-1,15).toISOString().split('T')[0];
     document.getElementById('inp-hasta').value=new Date().toISOString().split('T')[0];
   }
-  // Show first screen
-  ir('p1');
+  // Show first screen — pero solo si no hay un checklist activo ya visible
+  var ckActivo=false;
+  try{
+    var ul=localStorage.getItem('ck_ultimo_periodo');
+    if(ul){var p=JSON.parse(ul);ckActivo=(localStorage.getItem('ck_'+p.desde+'_'+p.hasta)||'[]')!=='[]';}
+  }catch(e){}
+  if(!ckActivo)ir('p1');
 }
 function initConsolidar_OLD(){if(!document.getElementById('cDesde').value){var h=new Date();document.getElementById('cDesde').value=new Date(h.getFullYear(),h.getMonth(),1).toISOString().split('T')[0];document.getElementById('cHasta').value=cHoy();}document.getElementById('consol-paso1').style.display='block';document.getElementById('consol-paso2').style.display='none';document.getElementById('consol-paso3').style.display='none';}
 function cSetAtajo(t){var h=new Date(),d,u=cHoy();if(t==='mes'){d=new Date(h.getFullYear(),h.getMonth(),1).toISOString().split('T')[0];}else if(t==='15'){d=new Date(h.getFullYear(),h.getMonth()-1,15).toISOString().split('T')[0];u=new Date(h.getFullYear(),h.getMonth(),15).toISOString().split('T')[0];}else{var x=new Date(h);x.setDate(x.getDate()-30);d=x.toISOString().split('T')[0];}document.getElementById('cDesde').value=d;document.getElementById('cHasta').value=u;}
@@ -2555,23 +2560,25 @@ function cGuardarChecklist(porEdif,desde,hasta){
       items.push({ID:'mat-'+edif,Periodo_Desde:desde,Periodo_Hasta:hasta,Nombre_Boleta:nombreMat,Edificio:edif,Tipo:'Materiales Abono',Descripcion:'Materiales período',Monto:totalMats,Estado:'Pendiente'});
     }
   });
-  // Guardar en localStorage (persiste entre sesiones) y agregar al historial
-  try{
-    var key='ck_'+desde+'_'+hasta;
-    localStorage.setItem(key,JSON.stringify(items));
-    localStorage.setItem('ck_ultimo_periodo',JSON.stringify({desde:desde,hasta:hasta}));
-    // Historial de consolidados: guardar resumen de cada período generado
-    var hist=JSON.parse(localStorage.getItem('ck_historial')||'[]');
-    var totalHist=items.reduce(function(s,i){return s+(parseFloat(i.Monto)||0);},0);
-    // Actualizar si ya existe ese período, agregar si no
-    var idx=hist.findIndex(function(h){return h.desde===desde&&h.hasta===hasta;});
-    var entrada={desde:desde,hasta:hasta,generado:new Date().toISOString(),total:totalHist,boletas:items.length};
-    if(idx>=0)hist[idx]=entrada;else hist.unshift(entrada);
-    // Mantener solo los últimos 24 consolidados
-    hist=hist.slice(0,24);
-    localStorage.setItem('ck_historial',JSON.stringify(hist));
-    console.log('Checklist en memoria: '+items.length+' ítems');
-  }catch(e){console.error('Error guardando checklist:',e);}
+  // Guardar en Sheet Consolidados (persiste entre dispositivos y sesiones)
+  var totalCK=items.reduce(function(s,i){return s+(parseFloat(i.Monto)||0);},0);
+  var ckID='CK-'+desde+'_'+hasta;
+  var ckPayload={action:'upsert',sheet:'Consolidados',key:'ID',keyval:ckID,
+    data:{ID:ckID,Desde:desde,Hasta:hasta,Generado:new Date().toISOString(),
+      Total:Math.round(totalCK),Boletas:items.length,Items:JSON.stringify(items)}};
+  fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ckPayload)})
+    .then(function(r){return r.json();})
+    .then(function(j){
+      if(j&&j.ok){
+        // Caché local para carga rápida sin esperar red
+        try{
+          localStorage.setItem('ck_'+desde+'_'+hasta,JSON.stringify(items));
+          localStorage.setItem('ck_ultimo_periodo',JSON.stringify({desde:desde,hasta:hasta}));
+        }catch(e){}
+        showToast('✅ Consolidado guardado');
+      }
+    })
+    .catch(function(e){console.error('Error guardando consolidado:',e);});
 }
 
 var ckState={edificios:[],registros:[],desde:'',hasta:''};
@@ -2727,7 +2734,14 @@ function ckGuardarEstado(id,facturado){
     var key='ck_'+p.desde+'_'+p.hasta;
     var items=JSON.parse(localStorage.getItem(key)||'[]');
     items.forEach(function(item){if(item.ID===id)item.Estado=facturado?'Facturado':'Pendiente';});
+    // Actualizar caché local
     localStorage.setItem(key,JSON.stringify(items));
+    // Sincronizar con Sheet (actualiza el campo Items con el nuevo estado)
+    var ckID='CK-'+p.desde+'_'+p.hasta;
+    var ckPayload={action:'upsert',sheet:'Consolidados',key:'ID',keyval:ckID,
+      data:{ID:ckID,Desde:p.desde,Hasta:p.hasta,Items:JSON.stringify(items)}};
+    fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ckPayload)})
+      .catch(function(e){console.error('Error sync estado:',e);});
   }catch(e){console.error('Error guardando estado:',e);}
 }
 
@@ -2736,101 +2750,110 @@ function ckGuardarEstado(id,facturado){
 // separada por sección (Abonos, Materiales, Particulares), con monto de cada ítem.
 function ckImprimir(){
   var periodo=document.getElementById('ck-periodo-label').textContent||'—';
-  var totEl=document.getElementById('ck-resumen-totales');
-  // Recopilar ítems de cada sección del DOM actual
-  function recopilarItems(listaId){
-    var out=[];
-    var lista=document.getElementById(listaId);
-    if(!lista)return out;
-    var divs=lista.querySelectorAll('[id^="ckitem-"]');
-    divs.forEach(function(d){
-      var id=d.id.replace('ckitem-','');
-      var facturado=ckChecked[id]||false;
-      var titulo=d.querySelector('div:nth-child(2) div:first-child');
-      var sub=d.querySelector('div:nth-child(2) div:nth-child(2)');
-      var monto=d.querySelector('div:nth-child(3) div:first-child');
-      out.push({
-        nombre:titulo?titulo.textContent:'',
-        sub:sub?sub.textContent:'',
-        monto:monto?monto.textContent:'',
-        facturado:facturado
-      });
-    });
-    return out;
-  }
-  var abonos=recopilarItems('ck-lista-abonos');
-  var mats=recopilarItems('ck-lista-mats');
-  var trabajos=recopilarItems('ck-lista-trabajos');
 
-  function renderSec(titulo,items){
-    if(!items.length)return '';
-    var html='<div class="ck-print-sec-title">'+titulo+'</div>';
-    items.forEach(function(it){
-      var tachado=it.facturado?'text-decoration:line-through;color:#aaa;':'';
-      html+=
-        '<div class="ck-print-item" style="'+tachado+'">'+
-          '<div class="ck-print-box">'+(it.facturado?'✓':'')+'</div>'+
-          '<div class="ck-print-info">'+
-            '<div class="ck-print-nombre">'+it.nombre+'</div>'+
-            (it.sub?'<div class="ck-print-detalle">'+it.sub+'</div>':'')+
-          '</div>'+
-          '<div class="ck-print-monto">'+it.monto+'</div>'+
-        '</div>';
+  // Recopilar ítems directamente desde ckState (datos en memoria, no del DOM)
+  var items=ckState.ckItems||[];
+  var abonos=items.filter(function(i){return i.Tipo==='Abono MO';});
+  var mats=items.filter(function(i){return i.Tipo==='Materiales Abono';});
+  var parts=items.filter(function(i){return i.Tipo==='Trabajo Particular'||i.Tipo==='Part';});
+
+  function renderSec(titulo,arr){
+    if(!arr.length)return '';
+    var h='<h3 style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:1px;border-left:4px solid #000;padding-left:8px;margin:16px 0 6px">'+titulo+'</h3>';
+    arr.forEach(function(it){
+      var fact=ckChecked[it.ID]||false;
+      var tach=fact?'text-decoration:line-through;color:#aaa;':'';
+      h+='<div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px solid #ddd;'+tach+'">' +
+        '<div style="width:18px;height:18px;border:2px solid #000;border-radius:3px;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">'+(fact?'✓':'')+'</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:13px;font-weight:800">'+it.Nombre_Boleta+'</div>'+
+          '<div style="font-size:11px;color:#555">'+it.Edificio+(it.Descripcion?' · '+it.Descripcion:'')+'</div>'+
+        '</div>'+
+        '<div style="font-size:14px;font-weight:900;text-align:right;white-space:nowrap">$'+ckFmt(parseFloat(it.Monto)||0)+'</div>'+
+      '</div>';
     });
-    return html;
+    return h;
   }
 
-  var area=document.getElementById('ck-print-area');
-  area.innerHTML=
-    '<div class="ck-print-header">'+
-      '<div class="ck-print-title">SOLEC — Checklist de facturación</div>'+
-      '<div class="ck-print-sub">Período: '+periodo+' · Impreso: '+new Date().toLocaleDateString('es-AR')+'</div>'+
+  var total=items.reduce(function(s,i){return s+(parseFloat(i.Monto)||0);},0);
+  var html='<!DOCTYPE html><html><head><meta charset="utf-8">'+
+    '<title>SOLEC Checklist '+periodo+'</title>'+
+    '<style>body{font-family:Arial,sans-serif;padding:20px;color:#000;max-width:700px;margin:0 auto}'+
+    'h1{font-size:18px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin:0}'+
+    '.sub{font-size:12px;color:#444;margin:4px 0 4px}'+
+    '.resumen{display:flex;gap:20px;background:#f5f5f5;padding:10px 14px;border-radius:6px;margin:12px 0;font-size:13px;font-weight:700}'+
+    '@media print{button{display:none!important}}'+
+    '</style></head><body>'+
+    '<button onclick="window.print()" style="float:right;background:#1a73e8;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:14px;font-weight:700;cursor:pointer">🖨️ Imprimir</button>'+
+    '<h1>SOLEC — Checklist de facturación</h1>'+
+    '<div class="sub">Período: '+periodo+' · Generado: '+new Date().toLocaleDateString('es-AR')+'</div>'+
+    '<div class="resumen">'+
+      '<span>🏢 Abonos: '+abonos.length+'</span>'+
+      '<span>📦 Materiales: '+mats.length+'</span>'+
+      '<span>⚡ Particulares: '+parts.length+'</span>'+
+      '<span style="margin-left:auto">Total: $'+ckFmt(total)+'</span>'+
     '</div>'+
     renderSec('🏢 Abonos mensuales',abonos)+
     renderSec('📦 Materiales de abono',mats)+
-    renderSec('⚡ Trabajos particulares',trabajos);
+    renderSec('⚡ Trabajos particulares',parts)+
+    '</body></html>';
 
-  // Delay para que el browser renderice el área antes de abrir el diálogo de impresión
-  setTimeout(function(){ window.print(); }, 300);
+  var w=window.open('','_blank');
+  if(w){w.document.write(html);w.document.close();}
+  else{showToast('Permitir ventanas emergentes para imprimir');}
 }
 
 // ── HISTORIAL DE CONSOLIDADOS ──
 function ckMostrarHistorial(){
-  var hist=[];
-  try{hist=JSON.parse(localStorage.getItem('ck_historial')||'[]');}catch(e){}
-  var body=document.getElementById('ck-historial-body');
-  if(!hist.length){
-    body.innerHTML='<div style="color:var(--t3);font-size:13px;text-align:center;padding:20px">Todavía no hay consolidados guardados.<br>Generá un checklist y quedará registrado acá.</div>';
-  }else{
-    body.innerHTML=hist.map(function(h,i){
-      var desde=h.desde.split('-').reverse().join('/');
-      var hasta=h.hasta.split('-').reverse().join('/');
-      var gen=h.generado?new Date(h.generado).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
-      var fmt=function(n){return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');};
-      return '<div style="background:var(--s2);border:1px solid var(--borde);border-radius:10px;padding:14px;margin-bottom:10px;cursor:pointer" onclick="ckCargarPeriodo(\''+h.desde+'\',\''+h.hasta+'\')">'+
-        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'+
-          '<div>'+
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;letter-spacing:1px;color:var(--am)">'+desde+' → '+hasta+'</div>'+
-            '<div style="font-size:11px;color:var(--t3);font-weight:600;margin-top:2px">Generado: '+gen+'</div>'+
-          '</div>'+
-          '<div style="text-align:right">'+
-            '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--verde)">$'+fmt(h.total||0)+'</div>'+
-            '<div style="font-size:10px;color:var(--t3);font-weight:700">'+h.boletas+' boletas</div>'+
-          '</div>'+
-        '</div>'+
-        '<div style="margin-top:8px;font-size:11px;color:var(--azul);font-weight:700">Tocar para cargar este período →</div>'+
-      '</div>';
-    }).join('');
-  }
+  var hbody=document.getElementById('ck-historial-body');
+  hbody.innerHTML='<div style="color:var(--t3);font-size:13px;text-align:center;padding:20px">Cargando historial...</div>';
   document.getElementById('ck-historial-modal').style.display='block';
+  fetch(API+'?sheet=Consolidados')
+    .then(function(r){return r.json();})
+    .then(function(rows){
+      if(!Array.isArray(rows)||!rows.length){
+        hbody.innerHTML='<div style="color:var(--t3);font-size:13px;text-align:center;padding:20px">Todavía no hay consolidados guardados.<br>Generá un checklist y quedará registrado acá.</div>';
+        return;
+      }
+      rows.sort(function(a,b){return (b.Generado||'')>(a.Generado||'')?1:-1;});
+      var fmtH=function(n){return Math.round(n||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');};
+      hbody.innerHTML=rows.map(function(h){
+        var dsd=(h.Desde||'').split('-').reverse().join('/');
+        var hst=(h.Hasta||'').split('-').reverse().join('/');
+        var gen=h.Generado?new Date(h.Generado).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
+        var fmtM=function(n){return Math.round(n||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');};
+        return '<div style="background:var(--s2);border:1px solid var(--borde);border-radius:10px;padding:14px;margin-bottom:10px;cursor:pointer" onclick="ckCargarDesdeSheet(\''+h.ID+'\',\''+h.Desde+'\',\''+h.Hasta+'\')">'+
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'+
+          '<div><div style="font-size:15px;font-weight:900;color:var(--am)">'+dsd+' → '+hst+'</div>'+
+          '<div style="font-size:11px;color:var(--t3);font-weight:600;margin-top:2px">'+gen+'</div></div>'+
+          '<div style="text-align:right"><div style="font-size:18px;font-weight:900;color:var(--verde)">$'+fmtM(h.Total)+'</div>'+
+          '<div style="font-size:10px;color:var(--t3);font-weight:700">'+h.Boletas+' boletas</div></div></div>'+
+          '<div style="margin-top:8px;font-size:11px;color:var(--azul);font-weight:700">Tocar para cargar →</div></div>';
+      }).join('');
+    })
+    .catch(function(){hbody.innerHTML='<div style="color:var(--rojo);font-size:13px;text-align:center;padding:20px">Error al cargar historial</div>';});
 }
 
-// Carga un período guardado en el historial directo en el checklist
-function ckCargarPeriodo(desde,hasta){
+// Carga un período desde el Sheet y lo pone en el checklist
+function ckCargarDesdeSheet(id,desde,hasta){
   document.getElementById('ck-historial-modal').style.display='none';
-  document.getElementById('ckDesde').value=desde;
-  document.getElementById('ckHasta').value=hasta;
-  ckBuscar();
+  showToast('Cargando período...');
+  fetch(API+'?sheet=Consolidados')
+    .then(function(r){return r.json();})
+    .then(function(rows){
+      var row=rows.find(function(r){return r.ID===id;});
+      if(!row){showToast('No se encontró el período');return;}
+      var items=[];
+      try{items=JSON.parse(row.Items||'[]');}catch(e){}
+      try{
+        localStorage.setItem('ck_'+desde+'_'+hasta,JSON.stringify(items));
+        localStorage.setItem('ck_ultimo_periodo',JSON.stringify({desde:desde,hasta:hasta}));
+      }catch(e){}
+      document.getElementById('ckDesde').value=desde;
+      document.getElementById('ckHasta').value=hasta;
+      ckBuscar();
+    })
+    .catch(function(){showToast('Error al cargar período');});
 }
 
 
