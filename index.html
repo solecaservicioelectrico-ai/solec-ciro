@@ -452,7 +452,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.36</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.37</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -3290,9 +3290,22 @@ function p3GuardarSheet(){
   });
   var total=todos.reduce(function(s,i){return s+i.monto;},0);
   var ckID='CK-'+DESDE+'_'+HASTA;
+  // Códigos de registros seleccionados — para reproducir la selección exacta en el historial
+  var codigos=[];
+  if(cState&&cState.registros&&cState.seleccionados){
+    cState.registros.forEach(function(r,i){
+      var edif=r.Edificio;
+      if(cState.seleccionados[edif]&&cState.seleccionados[edif].has(i)){
+        var cod=r.Codigo||r.codigo||r.ID||'';
+        if(cod)codigos.push(cod);
+      }
+    });
+  }
   var payload={action:'upsert',sheet:'Consolidados',key:'ID',keyval:ckID,
     data:{ID:ckID,Desde:DESDE,Hasta:HASTA,Generado:new Date().toISOString(),
-      Total:Math.round(total),Boletas:items.length,Items:JSON.stringify(items)}};
+      Total:Math.round(total),Boletas:items.length,Items:JSON.stringify(items),
+      Seleccion:codigos.length?JSON.stringify(codigos):''}};
+
   fetch(API,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)})
     .then(function(r){return r.json();})
     .then(function(j){if(j&&j.ok)console.log('✅ Consolidado guardado en Sheet: '+ckID);})
@@ -3390,7 +3403,25 @@ function p3CargarHistorial(idx){
 
   document.getElementById('p3-historial-modal').style.display='none';
 
-  // Mostrar en modal de detalle histórico
+  // Si hay selección guardada, traer registros completos del Sheet
+  var codigos=[];
+  try{codigos=JSON.parse(h.Seleccion||'[]');}catch(e){}
+
+  if(codigos.length>0){
+    // Traer registros del Sheet y filtrar por los códigos guardados
+    showToast('Cargando detalle completo...');
+    fetch(API+'?sheet=Registros')
+      .then(function(r){return r.json();})
+      .then(function(regs){
+        var seleccionados=regs.filter(function(r){return codigos.indexOf(r.Codigo||r.codigo||r.ID||'')>=0;});
+        p3MostrarDetalleHistorial(h,seleccionados,items);
+      })
+      .catch(function(){p3MostrarDetalleHistorial(h,[],items);});
+    return;
+  }
+
+  // Sin selección guardada (consolidados anteriores): mostrar solo lo que hay en Items
+  p3MostrarDetalleHistorial(h,[],items);
   var modal=document.getElementById('p3-hist-detalle-modal');
   var body=document.getElementById('p3-hist-detalle-body');
   var tit=document.getElementById('p3-hist-detalle-tit');
@@ -3443,6 +3474,132 @@ function p3CargarHistorial(idx){
     renderSecHist('📦 Materiales de abono','var(--am)',mt)+
     renderSecHist('⚡ Trabajos particulares','var(--azul)',pt);
 
+  modal.style.display='block';
+}
+
+// ── DETALLE COMPLETO DE HISTORIAL ──
+function p3MostrarDetalleHistorial(h,regsCompletos,itemsGuardados){
+  var modal=document.getElementById('p3-hist-detalle-modal');
+  var body=document.getElementById('p3-hist-detalle-body');
+  var tit=document.getElementById('p3-hist-detalle-tit');
+  if(!modal)return;
+
+  var dsd=(h.Desde||'').split('-').reverse().join('/');
+  var hst=(h.Hasta||'').split('-').reverse().join('/');
+  var gen=h.Generado?new Date(h.Generado).toLocaleDateString('es-AR'):'—';
+  tit.textContent=dsd+' → '+hst+' · '+gen;
+
+  var fmtN=function(n){return Math.round(n||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');};
+  var totalFact=itemsGuardados.filter(function(it){return it.Estado==='Facturado';}).length;
+  var totalMonto=itemsGuardados.reduce(function(s,it){return s+(parseFloat(it.Monto||it.monto)||0);},0);
+
+  var html='<div style="background:var(--s2);border:1px solid var(--borde);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;gap:16px;flex-wrap:wrap">'
+    +'<span style="font-size:12px;font-weight:700;color:var(--verde)">✓ '+totalFact+' facturadas</span>'
+    +'<span style="font-size:12px;font-weight:700;color:var(--am)">⏳ '+(itemsGuardados.length-totalFact)+' pendientes</span>'
+    +'<span style="font-size:12px;font-weight:700;color:var(--t);margin-left:auto">Total: $'+fmtN(totalMonto)+'</span>'
+    +'</div>';
+
+  if(regsCompletos.length>0){
+    // Tenemos los registros completos — mostrar todo el detalle
+    // Agrupar por edificio
+    var porEdif={};
+    regsCompletos.forEach(function(r){
+      var edif=r.Edificio||'Sin edificio';
+      if(!porEdif[edif])porEdif[edif]=[];
+      porEdif[edif].push(r);
+    });
+
+    Object.keys(porEdif).sort().forEach(function(edif){
+      var regs=porEdif[edif].sort(function(a,b){return (a.Fecha||'')<(b.Fecha||'')?-1:1;});
+      // Buscar si alguna boleta de este edificio está facturada
+      var boletaEdif=itemsGuardados.find(function(it){return (it.Edificio||it.edificio||'')=== edif;});
+      var facturado=boletaEdif&&boletaEdif.Estado==='Facturado';
+
+      html+='<div style="background:var(--s1);border:1px solid var(--borde);border-radius:12px;margin-bottom:12px;overflow:hidden">'
+        +'<div style="background:linear-gradient(135deg,#1e1d10,var(--s1));border-bottom:1px solid rgba(245,197,24,.3);padding:12px 14px;display:flex;justify-content:space-between;align-items:center">'
+        +'<div><div style="font-family:Bebas Neue,sans-serif;font-size:18px;letter-spacing:2px;color:var(--am)'+(facturado?';text-decoration:line-through;opacity:0.6':'')+'">'+edif+'</div>'
+        +'<div style="font-size:11px;color:var(--t3);font-weight:600">'+regs.length+' visita'+(regs.length>1?'s':'')+'</div></div>'
+        +(facturado?'<div style="background:rgba(0,200,150,.15);border:1px solid var(--verde);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:800;color:var(--verde)">✓ Facturado</div>':'')
+        +'</div>';
+
+      regs.forEach(function(r,vi){
+        var fecha=String(r.Fecha||'').split('T')[0].split('-').reverse().join('/');
+        var hora=r.Hora?String(r.Hora).substring(0,5)+'hs':'';
+        var desc=cLimpiarMO?cLimpiarMO(String(r.Intervenciones||r.Observaciones||'').trim()):String(r.Intervenciones||'');
+        var lineas=desc.split('
+').filter(function(l){return l.trim();});
+        var moMonto=parseFloat(r['Monto MO']||0)||0;
+        var matMonto=parseFloat(r['Monto Materiales']||0)||0;
+
+        html+='<div style="padding:12px 14px;border-top:1px solid rgba(74,82,120,.3)">'
+          +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--azul);margin-bottom:6px">Visita '+(vi+1)+' · '+fecha+(hora?' · '+hora:'')+'</div>'
+          +'<div style="font-size:12px;color:var(--t2);line-height:1.6;font-weight:600">';
+
+        lineas.forEach(function(l,i){
+          html+='<div style="padding:3px 0;border-bottom:1px solid rgba(74,82,120,.15)">'+(i+1)+'. '+l+'</div>';
+        });
+
+        html+='</div>';
+
+        // Materiales del registro
+        var mt={};
+        var raw=r['Materiales Extra']||'';
+        if(raw&&raw!=='[]'){
+          try{
+            var arr=JSON.parse(raw);
+            if(Array.isArray(arr))arr.forEach(function(m){
+              var nom=m.nombre||m.Nombre||'';
+              var qty=parseInt(m.cantidad||m.qty||1)||1;
+              var un=m.unidad||m.Unidad||'u';
+              if(!nom)return;
+              if(!mt[nom])mt[nom]={qty:0,un:un};
+              mt[nom].qty+=qty;
+            });
+          }catch(e){}
+        }
+
+        if(Object.keys(mt).length>0){
+          html+='<div style="margin-top:8px;background:rgba(245,197,24,.06);border:1px solid rgba(245,197,24,.2);border-radius:6px;padding:8px 10px">'
+            +'<div style="font-size:10px;font-weight:800;color:var(--am);margin-bottom:4px">📦 MATERIALES</div>';
+          Object.entries(mt).forEach(function(e){
+            html+='<div style="font-size:12px;color:var(--t2);font-weight:600">· '+e[1].qty+' '+e[1].un+' '+e[0]+'</div>';
+          });
+          html+='</div>';
+        }
+
+        if(moMonto>0||matMonto>0){
+          html+='<div style="display:flex;gap:12px;margin-top:8px;font-size:11px;font-weight:700">';
+          if(moMonto>0)html+='<span style="color:var(--azul)">MO: $'+fmtN(moMonto)+'</span>';
+          if(matMonto>0)html+='<span style="color:var(--am)">Mats: $'+fmtN(matMonto)+'</span>';
+          html+='</div>';
+        }
+
+        html+='</div>';
+      });
+
+      html+='</div>';
+    });
+  } else {
+    // Sin registros completos (consolidados viejos sin Seleccion) — mostrar solo resumen de items
+    html+='<div style="color:var(--t3);font-size:13px;text-align:center;padding:16px;background:var(--s2);border-radius:8px;margin-bottom:12px">Este consolidado fue generado antes del historial detallado.<br>Solo se muestra el resumen.</div>';
+    itemsGuardados.forEach(function(it){
+      var fact=it.Estado==='Facturado';
+      var monto=parseFloat(it.Monto||it.monto)||0;
+      var colorTipo=it.Tipo==='abono'||it.Tipo==='Abono MO'?'var(--verde)':it.Tipo==='mats'||it.Tipo==='Materiales Abono'?'var(--am)':'var(--azul)';
+      html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--s2);border:1px solid var(--borde);border-left:3px solid '+colorTipo+';border-radius:8px;margin-bottom:6px'+(fact?';opacity:0.6':'')+'">'+
+        '<div style="width:18px;height:18px;border:2px solid '+colorTipo+';border-radius:3px;background:'+(fact?colorTipo:'transparent')+';flex-shrink:0;display:flex;align-items:center;justify-content:center">'+
+        (fact?'<span style="color:#000;font-size:10px;font-weight:900">✓</span>':'')+
+        '</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:12px;font-weight:800'+(fact?';text-decoration:line-through':'')+'">'+((it.Nombre_Boleta||it.nombre||it.id))+'</div>'+
+          '<div style="font-size:11px;color:var(--t3)">'+(it.Edificio||it.edificio||'')+'</div>'+
+        '</div>'+
+        '<div style="font-size:13px;font-weight:900;color:'+colorTipo+';white-space:nowrap">$'+fmtN(monto)+'</div>'+
+      '</div>';
+    });
+  }
+
+  body.innerHTML=html;
   modal.style.display='block';
 }
 
