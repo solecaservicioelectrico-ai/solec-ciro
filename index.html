@@ -452,7 +452,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.38</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.39</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -3427,61 +3427,8 @@ function p3CargarHistorial(idx){
     return;
   }
 
-  // Sin selección guardada (consolidados anteriores): mostrar solo lo que hay en Items
+  // Sin selección guardada (consolidados anteriores): mostrar solo resumen de items
   p3MostrarDetalleHistorial(h,[],items);
-  var modal=document.getElementById('p3-hist-detalle-modal');
-  var body=document.getElementById('p3-hist-detalle-body');
-  var tit=document.getElementById('p3-hist-detalle-tit');
-  if(!modal){showToast('Error: modal no encontrado');return;}
-
-  var dsd=(h.Desde||'').split('-').reverse().join('/');
-  var hst=(h.Hasta||'').split('-').reverse().join('/');
-  var gen=h.Generado?new Date(h.Generado).toLocaleDateString('es-AR'):'—';
-  tit.textContent=dsd+' → '+hst+' · '+gen;
-
-  var fmtN=function(n){return Math.round(n||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');};
-
-  // Agrupar por tipo
-  var ab=items.filter(function(it){var t=it.Tipo||it.tipo||'';return t==='abono'||t==='Abono MO';});
-  var mt=items.filter(function(it){var t=it.Tipo||it.tipo||'';return t==='mats'||t==='Materiales Abono';});
-  var pt=items.filter(function(it){var t=it.Tipo||it.tipo||'';return t!=='abono'&&t!=='Abono MO'&&t!=='mats'&&t!=='Materiales Abono';});
-
-  var totalFact=items.filter(function(it){return it.Estado==='Facturado';}).length;
-  var totalPend=items.length-totalFact;
-  var totalMonto=items.reduce(function(s,it){return s+(parseFloat(it.Monto||it.monto)||0);},0);
-
-  function renderSecHist(titulo,color,arr){
-    if(!arr.length)return '';
-    var h2='<div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:'+color+';margin:16px 0 8px;border-left:4px solid '+color+';padding-left:8px">'+titulo+'</div>';
-    arr.forEach(function(it){
-      var fact=it.Estado==='Facturado';
-      var monto=parseFloat(it.Monto||it.monto)||0;
-      h2+='<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--s2);border:1px solid var(--borde);border-left:3px solid '+color+';border-radius:8px;margin-bottom:6px'+(fact?';opacity:0.6':'')+'">'+
-        '<div style="width:20px;height:20px;border:2px solid '+color+';border-radius:4px;background:'+(fact?color:'transparent')+';flex-shrink:0;display:flex;align-items:center;justify-content:center">'+
-        (fact?'<span style="color:#000;font-size:11px;font-weight:900">✓</span>':'')+
-        '</div>'+
-        '<div style="flex:1;min-width:0">'+
-          '<div style="font-size:12px;font-weight:800;color:var(--t)'+(fact?';text-decoration:line-through':'')+'">'+
-            (it.Nombre_Boleta||it.nombre||it.id)+'</div>'+
-          '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+(it.Edificio||it.edificio||'')+'</div>'+
-        '</div>'+
-        '<div style="font-size:14px;font-weight:900;color:'+color+';white-space:nowrap">$'+fmtN(monto)+'</div>'+
-      '</div>';
-    });
-    return h2;
-  }
-
-  body.innerHTML=
-    '<div style="background:var(--s2);border:1px solid var(--borde);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;gap:16px;flex-wrap:wrap">'+
-      '<span style="font-size:12px;font-weight:700;color:var(--verde)">✓ '+totalFact+' facturadas</span>'+
-      '<span style="font-size:12px;font-weight:700;color:var(--am)">⏳ '+totalPend+' pendientes</span>'+
-      '<span style="font-size:12px;font-weight:700;color:var(--t);margin-left:auto">Total: $'+fmtN(totalMonto)+'</span>'+
-    '</div>'+
-    renderSecHist('🏢 Abonos mensuales','var(--verde)',ab)+
-    renderSecHist('📦 Materiales de abono','var(--am)',mt)+
-    renderSecHist('⚡ Trabajos particulares','var(--azul)',pt);
-
-  modal.style.display='block';
 }
 
 // ── DETALLE COMPLETO DE HISTORIAL ──
