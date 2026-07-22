@@ -452,7 +452,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.28</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.29</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -2701,7 +2701,11 @@ function ckRender(){
     abonados.sort(function(a,b){return(a.Nombre||'').localeCompare(b.Nombre||'');}).forEach(function(e,i){
       var id='ab'+i;if(ckChecked[id]===undefined)ckChecked[id]=false;
       var total=Math.round((parseFloat(e['Precio Abono']||e['precio_abono']||e.PrecioAbono||0)||0)*(parseFloat(e['Indice'])||1));
-      var nombre=ckGenerarNombre(e.Nombre,'Preventivo/Abono',ckState.hasta,false);
+      var _meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+      var _hp=ckState.hasta.split('-');
+      var _mes=_meses[parseInt(_hp[1])-1]||_hp[1];
+      var _norm=function(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9\s]/g,'').trim().replace(/\s+/g,'-');};
+      var nombre=_mes+'-'+_hp[0]+'-'+_norm(e.Nombre)+'-preventivo';
       lA.appendChild(ckCrearItem(id,nombre,e.Nombre+' · '+(e['Administración']||''),'Abono mensual',total,'var(--verde)'));
     });
   } else {
