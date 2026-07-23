@@ -452,7 +452,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.40</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.41</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -3433,7 +3433,24 @@ function p3CargarHistorial(idx){
 }
 
 // ── DETALLE COMPLETO DE HISTORIAL ──
+// Variables globales para historial de navegación
+var _histDetalleH=null;
+var _histDetalleRegs=[];
+var _histDetalleItems=[];
+var _histDetallePorEdif={};
+
 function p3MostrarDetalleHistorial(h,regsCompletos,itemsGuardados){
+  // Guardar datos para poder navegar entre edificios
+  _histDetalleH=h;
+  _histDetalleRegs=regsCompletos;
+  _histDetalleItems=itemsGuardados;
+  _histDetallePorEdif={};
+  regsCompletos.forEach(function(r){
+    var edif=r.Edificio||'Sin edificio';
+    if(!_histDetallePorEdif[edif])_histDetallePorEdif[edif]=[];
+    _histDetallePorEdif[edif].push(r);
+  });
+
   var modal=document.getElementById('p3-hist-detalle-modal');
   var body=document.getElementById('p3-hist-detalle-body');
   var tit=document.getElementById('p3-hist-detalle-tit');
@@ -3442,99 +3459,48 @@ function p3MostrarDetalleHistorial(h,regsCompletos,itemsGuardados){
   var dsd=(h.Desde||'').split('-').reverse().join('/');
   var hst=(h.Hasta||'').split('-').reverse().join('/');
   var gen=h.Generado?new Date(h.Generado).toLocaleDateString('es-AR'):'—';
-  tit.textContent=dsd+' → '+hst+' · '+gen;
+  tit.textContent=dsd+' → '+hst;
 
   var fmtN=function(n){return Math.round(n||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');};
   var totalFact=itemsGuardados.filter(function(it){return it.Estado==='Facturado';}).length;
   var totalMonto=itemsGuardados.reduce(function(s,it){return s+(parseFloat(it.Monto||it.monto)||0);},0);
 
-  var html='<div style="background:var(--s2);border:1px solid var(--borde);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;gap:16px;flex-wrap:wrap">'
+  var html='<div style="font-size:11px;color:var(--t3);margin-bottom:12px">'+gen+' · '+itemsGuardados.length+' boletas</div>'
+    +'<div style="background:var(--s2);border:1px solid var(--borde);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;gap:16px;flex-wrap:wrap">'
     +'<span style="font-size:12px;font-weight:700;color:var(--verde)">✓ '+totalFact+' facturadas</span>'
     +'<span style="font-size:12px;font-weight:700;color:var(--am)">⏳ '+(itemsGuardados.length-totalFact)+' pendientes</span>'
-    +'<span style="font-size:12px;font-weight:700;color:var(--t);margin-left:auto">Total: $'+fmtN(totalMonto)+'</span>'
+    +'<span style="font-size:12px;font-weight:700;color:var(--t);margin-left:auto">$'+fmtN(totalMonto)+'</span>'
     +'</div>';
 
   if(regsCompletos.length>0){
-    // Tenemos los registros completos — mostrar todo el detalle
-    // Agrupar por edificio
-    var porEdif={};
-    regsCompletos.forEach(function(r){
-      var edif=r.Edificio||'Sin edificio';
-      if(!porEdif[edif])porEdif[edif]=[];
-      porEdif[edif].push(r);
-    });
-
-    Object.keys(porEdif).sort().forEach(function(edif){
-      var regs=porEdif[edif].sort(function(a,b){return (a.Fecha||'')<(b.Fecha||'')?-1:1;});
-      // Buscar si alguna boleta de este edificio está facturada
+    // Vista resumen: un edificio por tarjeta, tocable para ver el detalle
+    Object.keys(_histDetallePorEdif).sort().forEach(function(edif){
+      var regs=_histDetallePorEdif[edif];
       var boletaEdif=itemsGuardados.find(function(it){return (it.Edificio||it.edificio||'')=== edif;});
       var facturado=boletaEdif&&boletaEdif.Estado==='Facturado';
-
-      html+='<div style="background:var(--s1);border:1px solid var(--borde);border-radius:12px;margin-bottom:12px;overflow:hidden">'
-        +'<div style="background:linear-gradient(135deg,#1e1d10,var(--s1));border-bottom:1px solid rgba(245,197,24,.3);padding:12px 14px;display:flex;justify-content:space-between;align-items:center">'
-        +'<div><div style="font-family:Bebas Neue,sans-serif;font-size:18px;letter-spacing:2px;color:var(--am)'+(facturado?';text-decoration:line-through;opacity:0.6':'')+'">'+edif+'</div>'
-        +'<div style="font-size:11px;color:var(--t3);font-weight:600">'+regs.length+' visita'+(regs.length>1?'s':'')+'</div></div>'
-        +(facturado?'<div style="background:rgba(0,200,150,.15);border:1px solid var(--verde);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:800;color:var(--verde)">✓ Facturado</div>':'')
+      var moTotal=regs.reduce(function(s,r){return s+(parseFloat(r['Monto MO']||0)||0);},0);
+      var matTotal=regs.reduce(function(s,r){return s+(parseFloat(r['Monto Materiales']||0)||0);},0);
+      var edifKey=edif.replace(/['"]/g,'').replace(/\s/g,'_');
+      html+='<div onclick="p3VerEdificio(''+edifKey+'')" style="background:var(--s1);border:1px solid var(--borde);border-left:4px solid '+(facturado?'var(--verde)':'var(--borde)')+';border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:12px">'
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="font-size:14px;font-weight:900;color:var(--am)'+(facturado?';text-decoration:line-through;opacity:0.7':'')+'">'+edif+'</div>'
+        +'<div style="font-size:11px;color:var(--t3);margin-top:2px">'+regs.length+' visita'+(regs.length>1?'s':'')+' · '+(facturado?'<span style="color:var(--verde)">✓ Facturado</span>':'<span style="color:var(--am)">Pendiente</span>')+'</div>'
+        +'<div style="font-size:11px;color:var(--t3);margin-top:2px">'
+        +(moTotal>0?'MO: $'+fmtN(moTotal)+'':'')
+        +(moTotal>0&&matTotal>0?' · ':'')
+        +(matTotal>0?'Mats: $'+fmtN(matTotal):'')
+        +'</div></div>'
+        +'<div style="font-size:18px;color:var(--t3)">›</div>'
         +'</div>';
-
-      regs.forEach(function(r,vi){
-        var fecha=String(r.Fecha||'').split('T')[0].split('-').reverse().join('/');
-        var hora=r.Hora?String(r.Hora).substring(0,5)+'hs':'';
-        var desc=cLimpiarMO?cLimpiarMO(String(r.Intervenciones||r.Observaciones||'').trim()):String(r.Intervenciones||'');
-        var lineas=desc.split('\n').filter(function(l){return l.trim();});
-        var moMonto=parseFloat(r['Monto MO']||0)||0;
-        var matMonto=parseFloat(r['Monto Materiales']||0)||0;
-
-        html+='<div style="padding:12px 14px;border-top:1px solid rgba(74,82,120,.3)">'
-          +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--azul);margin-bottom:6px">Visita '+(vi+1)+' · '+fecha+(hora?' · '+hora:'')+'</div>'
-          +'<div style="font-size:12px;color:var(--t2);line-height:1.6;font-weight:600">';
-
-        lineas.forEach(function(l,i){
-          html+='<div style="padding:3px 0;border-bottom:1px solid rgba(74,82,120,.15)">'+(i+1)+'. '+l+'</div>';
-        });
-
-        html+='</div>';
-
-        // Materiales del registro
-        var mt={};
-        var raw=r['Materiales Extra']||'';
-        if(raw&&raw!=='[]'){
-          try{
-            var arr=JSON.parse(raw);
-            if(Array.isArray(arr))arr.forEach(function(m){
-              var nom=m.nombre||m.Nombre||'';
-              var qty=parseInt(m.cantidad||m.qty||1)||1;
-              var un=m.unidad||m.Unidad||'u';
-              if(!nom)return;
-              if(!mt[nom])mt[nom]={qty:0,un:un};
-              mt[nom].qty+=qty;
-            });
-          }catch(e){}
-        }
-
-        if(Object.keys(mt).length>0){
-          html+='<div style="margin-top:8px;background:rgba(245,197,24,.06);border:1px solid rgba(245,197,24,.2);border-radius:6px;padding:8px 10px">'
-            +'<div style="font-size:10px;font-weight:800;color:var(--am);margin-bottom:4px">📦 MATERIALES</div>';
-          Object.entries(mt).forEach(function(e){
-            html+='<div style="font-size:12px;color:var(--t2);font-weight:600">· '+e[1].qty+' '+e[1].un+' '+e[0]+'</div>';
-          });
-          html+='</div>';
-        }
-
-        if(moMonto>0||matMonto>0){
-          html+='<div style="display:flex;gap:12px;margin-top:8px;font-size:11px;font-weight:700">';
-          if(moMonto>0)html+='<span style="color:var(--azul)">MO: $'+fmtN(moMonto)+'</span>';
-          if(matMonto>0)html+='<span style="color:var(--am)">Mats: $'+fmtN(matMonto)+'</span>';
-          html+='</div>';
-        }
-
-        html+='</div>';
-      });
-
-      html+='</div>';
+    });
+    // Guardar mapa de edificios por clave para lookup
+    window._histEdifMap={};
+    Object.keys(_histDetallePorEdif).forEach(function(edif){
+      var key=edif.replace(/['"]/g,'').replace(/\s/g,'_');
+      window._histEdifMap[key]={edif:edif,regs:_histDetallePorEdif[edif]};
     });
   } else {
-    // Sin registros completos (consolidados viejos sin Seleccion) — mostrar solo resumen de items
+    // Sin registros completos — mostrar solo resumen de boletas
     html+='<div style="color:var(--t3);font-size:13px;text-align:center;padding:16px;background:var(--s2);border-radius:8px;margin-bottom:12px">Este consolidado fue generado antes del historial detallado.<br>Solo se muestra el resumen.</div>';
     itemsGuardados.forEach(function(it){
       var fact=it.Estado==='Facturado';
@@ -3556,6 +3522,87 @@ function p3MostrarDetalleHistorial(h,regsCompletos,itemsGuardados){
   body.innerHTML=html;
   modal.style.display='block';
 }
+
+// Pantalla de detalle de un edificio específico del historial
+function p3VerEdificio(edifKey){
+  var entry=window._histEdifMap&&window._histEdifMap[edifKey];
+  if(!entry)return;
+  var edif=entry.edif;
+  var regs=entry.regs.sort(function(a,b){return (a.Fecha||'')<(b.Fecha||'')?-1:1;});
+  var fmtN=function(n){return Math.round(n||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');};
+
+  var tit=document.getElementById('p3-hist-detalle-tit');
+  if(tit)tit.textContent=edif;
+
+  // Cambiar botón Volver para que vuelva al resumen del período
+  var btnV=document.querySelector('#p3-hist-detalle-modal [onclick*="p3-historial-modal"]');
+  if(btnV){
+    btnV.setAttribute('onclick','p3MostrarDetalleHistorial(_histDetalleH,_histDetalleRegs,_histDetalleItems)');
+    btnV.textContent='← Período';
+  }
+
+  var html='<div style="margin-bottom:14px"><span onclick="p3MostrarDetalleHistorial(_histDetalleH,_histDetalleRegs,_histDetalleItems)" style="font-size:12px;color:var(--azul);font-weight:700;cursor:pointer">← Volver al resumen del período</span></div>';
+
+  regs.forEach(function(r,vi){
+    var fecha=String(r.Fecha||'').split('T')[0].split('-').reverse().join('/');
+    var hora=r.Hora?String(r.Hora).substring(0,5)+'hs':'';
+    var desc=cLimpiarMO?cLimpiarMO(String(r.Intervenciones||r.Observaciones||'').trim()):String(r.Intervenciones||'');
+    var lineas=desc.split('\n').filter(function(l){return l.trim();});
+    var moMonto=parseFloat(r['Monto MO']||0)||0;
+    var matMonto=parseFloat(r['Monto Materiales']||0)||0;
+
+    html+='<div style="background:var(--s1);border:1px solid var(--borde);border-radius:12px;margin-bottom:12px;overflow:hidden">'
+      +'<div style="background:linear-gradient(135deg,#0a1020,var(--s1));border-bottom:1px solid rgba(74,158,255,.3);padding:10px 14px">'
+      +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--azul)">Visita '+(vi+1)+' · '+fecha+(hora?' · '+hora:'')+'</div>'
+      +'</div>'
+      +'<div style="padding:12px 14px">'
+      +'<div style="font-size:12px;color:var(--t2);line-height:1.7;font-weight:600">';
+
+    lineas.forEach(function(l,i){
+      html+='<div style="padding:4px 0;border-bottom:1px solid rgba(74,82,120,.15)">'+(i+1)+'. '+l+'</div>';
+    });
+
+    html+='</div>';
+
+    // Materiales
+    var mt={};
+    var raw=r['Materiales Extra']||'';
+    if(raw&&raw!=='[]'){
+      try{
+        var arr=JSON.parse(raw);
+        if(Array.isArray(arr))arr.forEach(function(m){
+          var nom=m.nombre||m.Nombre||'';
+          var qty=parseInt(m.cantidad||m.qty||1)||1;
+          var un=m.unidad||m.Unidad||'u';
+          if(!nom)return;
+          if(!mt[nom])mt[nom]={qty:0,un:un};
+          mt[nom].qty+=qty;
+        });
+      }catch(e){}
+    }
+
+    if(Object.keys(mt).length>0){
+      html+='<div style="margin-top:10px;background:rgba(245,197,24,.06);border:1px solid rgba(245,197,24,.2);border-radius:8px;padding:10px 12px">'
+        +'<div style="font-size:10px;font-weight:800;color:var(--am);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">📦 Materiales</div>';
+      Object.entries(mt).forEach(function(e){
+        html+='<div style="font-size:12px;color:var(--t2);font-weight:600;padding:2px 0">· '+e[1].qty+' '+e[1].un+' '+e[0]+'</div>';
+      });
+      html+='</div>';
+    }
+
+    if(moMonto>0||matMonto>0){
+      html+='<div style="display:flex;gap:12px;margin-top:10px;font-size:12px;font-weight:700;padding-top:8px;border-top:1px solid rgba(74,82,120,.2)">';
+      if(moMonto>0)html+='<span style="color:var(--azul)">MO: $'+fmtN(moMonto)+'</span>';
+      if(matMonto>0)html+='<span style="color:var(--am)">Mats: $'+fmtN(matMonto)+'</span>';
+      html+='</div>';
+    }
+
+    html+='</div></div>';
+  });
+
+  document.getElementById('p3-hist-detalle-body').innerHTML=html;
+}
+
 
 // ── MARCAR FACTURADO ──
 function marcarFacturado(id,btn){
