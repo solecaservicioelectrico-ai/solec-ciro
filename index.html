@@ -3311,8 +3311,8 @@ function p3GuardarSheet(){
       if(r){
         var fecha=String(r.Fecha||'').split('T')[0].split('-').reverse().join('/');
         var desc=cLimpiarMO?cLimpiarMO(String(r.Intervenciones||'').trim()):String(r.Intervenciones||'');
-        concepto=fecha+(desc?'
-'+desc:'');
+        concepto=fecha+(desc?'\n'+desc:'');
+
       } else {
         concepto=item.nombre;
       }
