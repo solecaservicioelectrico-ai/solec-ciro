@@ -452,7 +452,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.42</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.43</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -3410,144 +3410,153 @@ function p3CargarHistorial(idx){
   if(!items.length){showToast('Este período no tiene detalle guardado');return;}
 
   document.getElementById('p3-historial-modal').style.display='none';
+  showToast('Cargando...');
 
-  // Si hay selección guardada, traer registros completos del Sheet
+  // Guardar datos del período en memoria para el detalle por ítem
+  window._histPeriodo=h;
+  window._histItems=items;
+  window._histRegsCompletos=[];
+
   var codigos=[];
   try{codigos=JSON.parse(h.Seleccion||'[]');}catch(e){}
 
+  function mostrarChecklist(regsCompletos){
+    window._histRegsCompletos=regsCompletos;
+    // Agrupar registros por código para lookup rápido
+    window._histRegsPorCodigo={};
+    regsCompletos.forEach(function(r){
+      var cod=r.Codigo||r.codigo||r.ID||'';
+      if(cod)window._histRegsPorCodigo[cod]=r;
+    });
+
+    // Reconstruir CK desde items guardados
+    var _CK={abonos:[],mats:[],parts:[]};
+    var _fact={};
+    items.forEach(function(it){
+      if(it.Estado==='Facturado')_fact[it.ID||it.id]=true;
+      var obj={
+        id:it.ID||it.id,
+        nombre:it.Nombre_Boleta||it.nombre||it.ID||it.id,
+        edificio:it.Edificio||it.edificio||'',
+        monto:parseFloat(it.Monto||it.monto)||0,
+        tipo:it.Tipo||it.tipo||'abono',
+        codigos:it.codigos||[]
+      };
+      var t=obj.tipo;
+      if(t==='abono'||t==='Abono MO')_CK.abonos.push(obj);
+      else if(t==='mats'||t==='Materiales Abono')_CK.mats.push(obj);
+      else _CK.parts.push(obj);
+    });
+
+    // Mostrar en la misma pantalla p3 — mismo visual exacto
+    var dsd=(h.Desde||'').split('-').reverse().join('/');
+    var hst=(h.Hasta||'').split('-').reverse().join('/');
+    document.getElementById('p3-periodo').textContent=dsd+' → '+hst+' (historial)';
+
+    var body=document.getElementById('p3-body');
+    body.innerHTML='';
+    var totalAb=_CK.abonos.reduce(function(s,a){return s+a.monto;},0);
+    var totalMat=_CK.mats.reduce(function(s,m){return s+m.monto;},0);
+    var totalPart=_CK.parts.reduce(function(s,p){return s+p.monto;},0);
+    var totalBol=_CK.abonos.length+_CK.mats.length+_CK.parts.length;
+
+    var res=document.createElement('div');res.className='resumen';
+    res.innerHTML=
+      '<div class="ri"><div class="rn" style="color:var(--verde)">'+_CK.abonos.length+'</div><div class="rl">Abonos</div><div class="rm" style="color:var(--verde)">$'+fmt(totalAb)+'</div></div>'+
+      '<div class="ri"><div class="rn" style="color:var(--am)">'+_CK.mats.length+'</div><div class="rl">Mats</div><div class="rm" style="color:var(--am)">$'+fmt(totalMat)+'</div></div>'+
+      '<div class="ri"><div class="rn" style="color:var(--azul)">'+_CK.parts.length+'</div><div class="rl">Part.</div><div class="rm" style="color:var(--azul)">$'+fmt(totalPart)+'</div></div>'+
+      '<div class="ri"><div class="rn" style="color:var(--t)">'+totalBol+'</div><div class="rl">Boletas</div><div class="rm" style="color:var(--t)">$'+fmt(totalAb+totalMat+totalPart)+'</div></div>';
+    body.appendChild(res);
+
+    function mkSecHist(titulo,color,items2){
+      var div=document.createElement('div');
+      div.innerHTML='<div class="ck-stit" style="color:'+color+'">'+titulo+
+        '<span class="ck-badge" style="background:rgba(255,255,255,.06);border:1px solid '+color+';color:'+color+'">'+items2.length+'</span></div>';
+      items2.forEach(function(item){
+        var fact=_fact[item.id]||false;
+        var el=document.createElement('div');
+        el.className='cki'+(fact?' tachado':'');
+        el.style.borderLeft='4px solid '+color;
+        el.innerHTML=
+          '<div class="cki-chk" style="border-color:'+color+';background:'+(fact?color:'transparent')+'">'+
+            (fact?'<span style="color:#000;font-size:12px;font-weight:900">✓</span>':'')+
+          '</div>'+
+          '<div style="flex:1;min-width:0"><div class="cki-nom">'+item.nombre+'</div><div class="cki-sub">'+(item.edificio||'')+'</div></div>'+
+          '<div class="cki-monto" style="color:'+color+'">$'+fmt(item.monto)+'</div>';
+        // Al tocar abre el detalle del registro desde el Sheet (o el modal de facturación si es particular)
+        (function(it){
+          el.onclick=function(){abrirDetalleHistoricoItem(it);};
+        })(item);
+        div.appendChild(el);
+      });
+      return div;
+    }
+
+    body.appendChild(mkSecHist('🏢 Abonos mensuales','var(--verde)',_CK.abonos));
+    if(_CK.mats.length>0)body.appendChild(mkSecHist('📦 Materiales de abono','var(--am)',_CK.mats));
+    if(_CK.parts.length>0)body.appendChild(mkSecHist('⚡ Trabajos particulares','var(--azul)',_CK.parts));
+
+    _consolidadoActivo=true;
+    ir('p3');
+  }
+
   if(codigos.length>0){
-    // Traer registros del Sheet y filtrar por los códigos guardados
-    showToast('Cargando detalle completo...');
     fetch(API+'?sheet=Registros')
       .then(function(r){return r.json();})
       .then(function(regs){
-        var seleccionados=regs.filter(function(r){return codigos.indexOf(r.Codigo||r.codigo||r.ID||'')>=0;});
-        p3MostrarDetalleHistorial(h,seleccionados,items);
+        var sel=regs.filter(function(r){return codigos.indexOf(r.Codigo||r.codigo||r.ID||'')>=0;});
+        mostrarChecklist(sel);
       })
-      .catch(function(){p3MostrarDetalleHistorial(h,[],items);});
-    return;
+      .catch(function(){mostrarChecklist([]);});
+  } else {
+    mostrarChecklist([]);
   }
-
-  // Sin selección guardada (consolidados anteriores): mostrar solo resumen de items
-  p3MostrarDetalleHistorial(h,[],items);
 }
 
-// ── DETALLE COMPLETO DE HISTORIAL ──
-// Variables globales para historial de navegación
-var _histDetalleH=null;
-var _histDetalleRegs=[];
-var _histDetalleItems=[];
-var _histDetallePorEdif={};
+// Abrir detalle de un ítem del historial
+// Para abonos y mats: muestra los registros del Sheet de ese edificio en ese período
+// Para particulares: muestra el mismo modal de facturación (abrirAfip) pero sin botón facturar
+function abrirDetalleHistoricoItem(item){
+  var fmtN=function(n){return Math.round(n||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');};
+  var regsEdif=window._histRegsCompletos.filter(function(r){
+    return (r.Edificio||'')===(item.edificio||'');
+  }).sort(function(a,b){return (a.Fecha||'')<(b.Fecha||'')?-1:1;});
 
-function p3MostrarDetalleHistorial(h,regsCompletos,itemsGuardados){
-  // Guardar datos para poder navegar entre edificios
-  _histDetalleH=h;
-  _histDetalleRegs=regsCompletos;
-  _histDetalleItems=itemsGuardados;
-  _histDetallePorEdif={};
-  regsCompletos.forEach(function(r){
-    var edif=r.Edificio||'Sin edificio';
-    if(!_histDetallePorEdif[edif])_histDetallePorEdif[edif]=[];
-    _histDetallePorEdif[edif].push(r);
-  });
-
+  // Abrir modal de detalle del edificio (reutilizar p3-hist-detalle-modal)
   var modal=document.getElementById('p3-hist-detalle-modal');
   var body=document.getElementById('p3-hist-detalle-body');
   var tit=document.getElementById('p3-hist-detalle-tit');
   if(!modal)return;
 
+  var h=window._histPeriodo||{};
   var dsd=(h.Desde||'').split('-').reverse().join('/');
   var hst=(h.Hasta||'').split('-').reverse().join('/');
-  var gen=h.Generado?new Date(h.Generado).toLocaleDateString('es-AR'):'—';
-  tit.textContent=dsd+' → '+hst;
+  tit.textContent=item.edificio+' · '+dsd+' → '+hst;
 
-  var fmtN=function(n){return Math.round(n||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');};
-  var totalFact=itemsGuardados.filter(function(it){return it.Estado==='Facturado';}).length;
-  var totalMonto=itemsGuardados.reduce(function(s,it){return s+(parseFloat(it.Monto||it.monto)||0);},0);
+  // Cambiar botón Volver para que vuelva al checklist histórico
+  var btnV=modal.querySelector('[onclick*="historial-modal"]');
+  if(btnV){btnV.setAttribute('onclick','document.getElementById("p3-hist-detalle-modal").style.display="none"');btnV.textContent='← Volver';}
 
-  var html='<div style="font-size:11px;color:var(--t3);margin-bottom:12px">'+gen+' · '+itemsGuardados.length+' boletas</div>'
-    +'<div style="background:var(--s2);border:1px solid var(--borde);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;gap:16px;flex-wrap:wrap">'
-    +'<span style="font-size:12px;font-weight:700;color:var(--verde)">✓ '+totalFact+' facturadas</span>'
-    +'<span style="font-size:12px;font-weight:700;color:var(--am)">⏳ '+(itemsGuardados.length-totalFact)+' pendientes</span>'
-    +'<span style="font-size:12px;font-weight:700;color:var(--t);margin-left:auto">$'+fmtN(totalMonto)+'</span>'
+  if(regsEdif.length===0){
+    body.innerHTML='<div style="color:var(--t3);text-align:center;padding:20px;font-size:13px">No hay detalle de registros disponible para este ítem.<br>Solo se guardó el resumen en este período.</div>'
+      +'<div style="margin-top:12px;background:var(--s2);border:1px solid var(--borde);border-radius:10px;padding:14px">'
+      +'<div style="font-size:14px;font-weight:900;color:var(--am)">'+item.nombre+'</div>'
+      +'<div style="font-size:12px;color:var(--t3);margin-top:4px">'+item.edificio+'</div>'
+      +'<div style="font-size:18px;font-weight:900;color:var(--verde);margin-top:8px">$'+fmtN(item.monto)+'</div>'
+      +'</div>';
+    modal.style.display='block';
+    return;
+  }
+
+  var html='<div style="background:var(--s2);border:1px solid var(--borde);border-radius:10px;padding:12px 14px;margin-bottom:14px">'
+    +'<div style="font-size:14px;font-weight:900;color:var(--am)">'+item.nombre+'</div>'
+    +'<div style="font-size:11px;color:var(--t3);margin-top:2px">'+regsEdif.length+' visita'+(regsEdif.length>1?'s':'')+' · $'+fmtN(item.monto)+'</div>'
     +'</div>';
 
-  if(regsCompletos.length>0){
-    // Vista resumen: un edificio por tarjeta, tocable para ver el detalle
-    Object.keys(_histDetallePorEdif).sort().forEach(function(edif){
-      var regs=_histDetallePorEdif[edif];
-      var boletaEdif=itemsGuardados.find(function(it){return (it.Edificio||it.edificio||'')=== edif;});
-      var facturado=boletaEdif&&boletaEdif.Estado==='Facturado';
-      var moTotal=regs.reduce(function(s,r){return s+(parseFloat(r['Monto MO']||0)||0);},0);
-      var matTotal=regs.reduce(function(s,r){return s+(parseFloat(r['Monto Materiales']||0)||0);},0);
-      var edifKey=edif.replace(/['"]/g,'').replace(/\s/g,'_');
-      html+='<div onclick="p3VerEdificio(this.dataset.key)" data-key="'+edifKey+'" style="background:var(--s1);border:1px solid var(--borde);border-left:4px solid '+(facturado?'var(--verde)':'var(--borde)')+';border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:12px">'
-        +'<div style="flex:1;min-width:0">'
-        +'<div style="font-size:14px;font-weight:900;color:var(--am)'+(facturado?';text-decoration:line-through;opacity:0.7':'')+'">'+edif+'</div>'
-        +'<div style="font-size:11px;color:var(--t3);margin-top:2px">'+regs.length+' visita'+(regs.length>1?'s':'')+' · '+(facturado?'<span style="color:var(--verde)">✓ Facturado</span>':'<span style="color:var(--am)">Pendiente</span>')+'</div>'
-        +'<div style="font-size:11px;color:var(--t3);margin-top:2px">'
-        +(moTotal>0?'MO: $'+fmtN(moTotal)+'':'')
-        +(moTotal>0&&matTotal>0?' · ':'')
-        +(matTotal>0?'Mats: $'+fmtN(matTotal):'')
-        +'</div></div>'
-        +'<div style="font-size:18px;color:var(--t3)">›</div>'
-        +'</div>';
-    });
-    // Guardar mapa de edificios por clave para lookup
-    window._histEdifMap={};
-    Object.keys(_histDetallePorEdif).forEach(function(edif){
-      var key=edif.replace(/['"]/g,'').replace(/\s/g,'_');
-      window._histEdifMap[key]={edif:edif,regs:_histDetallePorEdif[edif]};
-    });
-  } else {
-    // Sin registros completos — mostrar solo resumen de boletas
-    html+='<div style="color:var(--t3);font-size:13px;text-align:center;padding:16px;background:var(--s2);border-radius:8px;margin-bottom:12px">Este consolidado fue generado antes del historial detallado.<br>Solo se muestra el resumen.</div>';
-    itemsGuardados.forEach(function(it){
-      var fact=it.Estado==='Facturado';
-      var monto=parseFloat(it.Monto||it.monto)||0;
-      var colorTipo=it.Tipo==='abono'||it.Tipo==='Abono MO'?'var(--verde)':it.Tipo==='mats'||it.Tipo==='Materiales Abono'?'var(--am)':'var(--azul)';
-      html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--s2);border:1px solid var(--borde);border-left:3px solid '+colorTipo+';border-radius:8px;margin-bottom:6px'+(fact?';opacity:0.6':'')+'">'+
-        '<div style="width:18px;height:18px;border:2px solid '+colorTipo+';border-radius:3px;background:'+(fact?colorTipo:'transparent')+';flex-shrink:0;display:flex;align-items:center;justify-content:center">'+
-        (fact?'<span style="color:#000;font-size:10px;font-weight:900">✓</span>':'')+
-        '</div>'+
-        '<div style="flex:1;min-width:0">'+
-          '<div style="font-size:12px;font-weight:800'+(fact?';text-decoration:line-through':'')+'">'+((it.Nombre_Boleta||it.nombre||it.id))+'</div>'+
-          '<div style="font-size:11px;color:var(--t3)">'+(it.Edificio||it.edificio||'')+'</div>'+
-        '</div>'+
-        '<div style="font-size:13px;font-weight:900;color:'+colorTipo+';white-space:nowrap">$'+fmtN(monto)+'</div>'+
-      '</div>';
-    });
-  }
-
-  body.innerHTML=html;
-  modal.style.display='block';
-}
-
-// Pantalla de detalle de un edificio específico del historial
-function p3VerEdificio(elOrKey){
-  var edifKey=typeof elOrKey==='string'?elOrKey:(elOrKey&&elOrKey.dataset?elOrKey.dataset.key:'');
-  var entry=window._histEdifMap&&window._histEdifMap[edifKey];
-  if(!entry)return;
-  var edif=entry.edif;
-  var regs=entry.regs.sort(function(a,b){return (a.Fecha||'')<(b.Fecha||'')?-1:1;});
-  var fmtN=function(n){return Math.round(n||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');};
-
-  var tit=document.getElementById('p3-hist-detalle-tit');
-  if(tit)tit.textContent=edif;
-
-  // Cambiar botón Volver para que vuelva al resumen del período
-  var btnV=document.querySelector('#p3-hist-detalle-modal [onclick*="p3-historial-modal"]');
-  if(btnV){
-    btnV.setAttribute('onclick','p3MostrarDetalleHistorial(_histDetalleH,_histDetalleRegs,_histDetalleItems)');
-    btnV.textContent='← Período';
-  }
-
-  var html='<div style="margin-bottom:14px"><span onclick="p3MostrarDetalleHistorial(_histDetalleH,_histDetalleRegs,_histDetalleItems)" style="font-size:12px;color:var(--azul);font-weight:700;cursor:pointer">← Volver al resumen del período</span></div>';
-
-  regs.forEach(function(r,vi){
+  regsEdif.forEach(function(r,vi){
     var fecha=String(r.Fecha||'').split('T')[0].split('-').reverse().join('/');
     var hora=r.Hora?String(r.Hora).substring(0,5)+'hs':'';
-    var desc=cLimpiarMO?cLimpiarMO(String(r.Intervenciones||r.Observaciones||'').trim()):String(r.Intervenciones||'');
+    var desc=cLimpiarMO?cLimpiarMO(String(r.Intervenciones||'').trim()):String(r.Intervenciones||'');
     var lineas=desc.split('\n').filter(function(l){return l.trim();});
     var moMonto=parseFloat(r['Monto MO']||0)||0;
     var matMonto=parseFloat(r['Monto Materiales']||0)||0;
@@ -3555,53 +3564,36 @@ function p3VerEdificio(elOrKey){
     html+='<div style="background:var(--s1);border:1px solid var(--borde);border-radius:12px;margin-bottom:12px;overflow:hidden">'
       +'<div style="background:linear-gradient(135deg,#0a1020,var(--s1));border-bottom:1px solid rgba(74,158,255,.3);padding:10px 14px">'
       +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--azul)">Visita '+(vi+1)+' · '+fecha+(hora?' · '+hora:'')+'</div>'
-      +'</div>'
-      +'<div style="padding:12px 14px">'
+      +'</div><div style="padding:12px 14px">'
       +'<div style="font-size:12px;color:var(--t2);line-height:1.7;font-weight:600">';
 
     lineas.forEach(function(l,i){
       html+='<div style="padding:4px 0;border-bottom:1px solid rgba(74,82,120,.15)">'+(i+1)+'. '+l+'</div>';
     });
-
     html+='</div>';
 
-    // Materiales
     var mt={};
     var raw=r['Materiales Extra']||'';
     if(raw&&raw!=='[]'){
-      try{
-        var arr=JSON.parse(raw);
-        if(Array.isArray(arr))arr.forEach(function(m){
-          var nom=m.nombre||m.Nombre||'';
-          var qty=parseInt(m.cantidad||m.qty||1)||1;
-          var un=m.unidad||m.Unidad||'u';
-          if(!nom)return;
-          if(!mt[nom])mt[nom]={qty:0,un:un};
-          mt[nom].qty+=qty;
-        });
-      }catch(e){}
+      try{var arr=JSON.parse(raw);if(Array.isArray(arr))arr.forEach(function(m){var nom=m.nombre||m.Nombre||'';var qty=parseInt(m.cantidad||m.qty||1)||1;var un=m.unidad||m.Unidad||'u';if(!nom)return;if(!mt[nom])mt[nom]={qty:0,un:un};mt[nom].qty+=qty;});}catch(e){}
     }
-
     if(Object.keys(mt).length>0){
       html+='<div style="margin-top:10px;background:rgba(245,197,24,.06);border:1px solid rgba(245,197,24,.2);border-radius:8px;padding:10px 12px">'
-        +'<div style="font-size:10px;font-weight:800;color:var(--am);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">📦 Materiales</div>';
-      Object.entries(mt).forEach(function(e){
-        html+='<div style="font-size:12px;color:var(--t2);font-weight:600;padding:2px 0">· '+e[1].qty+' '+e[1].un+' '+e[0]+'</div>';
-      });
+        +'<div style="font-size:10px;font-weight:800;color:var(--am);margin-bottom:6px">📦 Materiales</div>';
+      Object.entries(mt).forEach(function(e){html+='<div style="font-size:12px;color:var(--t2);font-weight:600;padding:2px 0">· '+e[1].qty+' '+e[1].un+' '+e[0]+'</div>';});
       html+='</div>';
     }
-
     if(moMonto>0||matMonto>0){
       html+='<div style="display:flex;gap:12px;margin-top:10px;font-size:12px;font-weight:700;padding-top:8px;border-top:1px solid rgba(74,82,120,.2)">';
       if(moMonto>0)html+='<span style="color:var(--azul)">MO: $'+fmtN(moMonto)+'</span>';
       if(matMonto>0)html+='<span style="color:var(--am)">Mats: $'+fmtN(matMonto)+'</span>';
       html+='</div>';
     }
-
     html+='</div></div>';
   });
 
-  document.getElementById('p3-hist-detalle-body').innerHTML=html;
+  body.innerHTML=html;
+  modal.style.display='block';
 }
 
 
