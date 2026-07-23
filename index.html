@@ -452,7 +452,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.39</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.40</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -3297,17 +3297,18 @@ function p3GuardarSheet(){
   var _pad=function(n){return n<10?'0'+n:n;};
   var _stamp=_ts.getFullYear()+''+_pad(_ts.getMonth()+1)+''+_pad(_ts.getDate())+'-'+_pad(_ts.getHours())+''+_pad(_ts.getMinutes());
   var ckID='CK-'+DESDE+'_'+HASTA+'_'+_stamp;
-  // Códigos de registros seleccionados — para reproducir la selección exacta en el historial
+  // Códigos de registros seleccionados — usa REGS y sel del consolidador amarillo
   var codigos=[];
-  if(cState&&cState.registros&&cState.seleccionados){
-    cState.registros.forEach(function(r,i){
+  if(REGS&&REGS.length&&sel&&Object.keys(sel).length){
+    REGS.forEach(function(r,i){
       var edif=r.Edificio;
-      if(cState.seleccionados[edif]&&cState.seleccionados[edif].has(i)){
+      if(sel[edif]&&sel[edif].has(i)){
         var cod=r.Codigo||r.codigo||r.ID||'';
         if(cod)codigos.push(cod);
       }
     });
   }
+  console.log('Seleccion: '+codigos.length+' registros | REGS: '+(REGS?REGS.length:0)+' | sel: '+Object.keys(sel||{}).length+' edificios');
   var payload={action:'upsert',sheet:'Consolidados',key:'ID',keyval:ckID,
     data:{ID:ckID,Desde:DESDE,Hasta:HASTA,Generado:new Date().toISOString(),
       Total:Math.round(total),Boletas:items.length,Items:JSON.stringify(items),
