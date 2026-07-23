@@ -3299,12 +3299,12 @@ function p3GuardarSheet(){
         item.regs.forEach(function(r){
           var fecha=String(r.Fecha||'').split('T')[0].split('-').reverse().join('/');
           var desc=cLimpiarMO?cLimpiarMO(String(r.Intervenciones||'').trim()):String(r.Intervenciones||'');
-          if(desc)lineasMats.push(fecha+': '+desc.split('
-').filter(Boolean).join(' / '));
+          if(desc)lineasMats.push(fecha+': '+desc.split('\n').filter(Boolean).join(' / '));
+
         });
       }
-      concepto=lineasMats.join('
-')||item.nombre;
+      concepto=lineasMats.join('\n')||item.nombre;
+
     } else if(item.tipo==='part'){
       // Para particulares: el reg tiene las intervenciones
       var r=item.reg;
