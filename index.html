@@ -3595,8 +3595,6 @@ function abrirDetalleHistoricoItem(item){
       return;
     }
     body.innerHTML='<div style="color:var(--t3);text-align:center;padding:20px;font-size:13px">No hay detalle de registros disponible para este ítem.<br>Solo se guardó el resumen en este período.</div>'
-  if(regsEdif.length===0){
-    body.innerHTML='<div style="color:var(--t3);text-align:center;padding:20px;font-size:13px">No hay detalle de registros disponible para este ítem.<br>Solo se guardó el resumen en este período.</div>'
       +'<div style="margin-top:12px;background:var(--s2);border:1px solid var(--borde);border-radius:10px;padding:14px">'
       +'<div style="font-size:14px;font-weight:900;color:var(--am)">'+item.nombre+'</div>'
       +'<div style="font-size:12px;color:var(--t3);margin-top:4px">'+item.edificio+'</div>'
