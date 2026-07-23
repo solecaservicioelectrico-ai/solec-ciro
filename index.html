@@ -452,7 +452,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.41</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.42</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -3481,7 +3481,7 @@ function p3MostrarDetalleHistorial(h,regsCompletos,itemsGuardados){
       var moTotal=regs.reduce(function(s,r){return s+(parseFloat(r['Monto MO']||0)||0);},0);
       var matTotal=regs.reduce(function(s,r){return s+(parseFloat(r['Monto Materiales']||0)||0);},0);
       var edifKey=edif.replace(/['"]/g,'').replace(/\s/g,'_');
-      html+='<div onclick="p3VerEdificio(''+edifKey+'')" style="background:var(--s1);border:1px solid var(--borde);border-left:4px solid '+(facturado?'var(--verde)':'var(--borde)')+';border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:12px">'
+      html+='<div onclick="p3VerEdificio(this.dataset.key)" data-key="'+edifKey+'" style="background:var(--s1);border:1px solid var(--borde);border-left:4px solid '+(facturado?'var(--verde)':'var(--borde)')+';border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:12px">'
         +'<div style="flex:1;min-width:0">'
         +'<div style="font-size:14px;font-weight:900;color:var(--am)'+(facturado?';text-decoration:line-through;opacity:0.7':'')+'">'+edif+'</div>'
         +'<div style="font-size:11px;color:var(--t3);margin-top:2px">'+regs.length+' visita'+(regs.length>1?'s':'')+' · '+(facturado?'<span style="color:var(--verde)">✓ Facturado</span>':'<span style="color:var(--am)">Pendiente</span>')+'</div>'
@@ -3524,7 +3524,8 @@ function p3MostrarDetalleHistorial(h,regsCompletos,itemsGuardados){
 }
 
 // Pantalla de detalle de un edificio específico del historial
-function p3VerEdificio(edifKey){
+function p3VerEdificio(elOrKey){
+  var edifKey=typeof elOrKey==='string'?elOrKey:(elOrKey&&elOrKey.dataset?elOrKey.dataset.key:'');
   var entry=window._histEdifMap&&window._histEdifMap[edifKey];
   if(!entry)return;
   var edif=entry.edif;
