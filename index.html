@@ -452,7 +452,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.43</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.44</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -3518,11 +3518,7 @@ function p3CargarHistorial(idx){
 // Para particulares: muestra el mismo modal de facturación (abrirAfip) pero sin botón facturar
 function abrirDetalleHistoricoItem(item){
   var fmtN=function(n){return Math.round(n||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');};
-  var regsEdif=window._histRegsCompletos.filter(function(r){
-    return (r.Edificio||'')===(item.edificio||'');
-  }).sort(function(a,b){return (a.Fecha||'')<(b.Fecha||'')?-1:1;});
-
-  // Abrir modal de detalle del edificio (reutilizar p3-hist-detalle-modal)
+  var tipo=item.tipo||'abono';
   var modal=document.getElementById('p3-hist-detalle-modal');
   var body=document.getElementById('p3-hist-detalle-body');
   var tit=document.getElementById('p3-hist-detalle-tit');
@@ -3533,9 +3529,27 @@ function abrirDetalleHistoricoItem(item){
   var hst=(h.Hasta||'').split('-').reverse().join('/');
   tit.textContent=item.edificio+' · '+dsd+' → '+hst;
 
-  // Cambiar botón Volver para que vuelva al checklist histórico
   var btnV=modal.querySelector('[onclick*="historial-modal"]');
   if(btnV){btnV.setAttribute('onclick','document.getElementById("p3-hist-detalle-modal").style.display="none"');btnV.textContent='← Volver';}
+
+  // ABONO MENSUAL — solo muestra nombre y precio, sin registros de campo
+  if(tipo==='abono'||tipo==='Abono MO'){
+    body.innerHTML=
+      '<div style="background:var(--s2);border:1px solid rgba(0,200,150,.3);border-radius:12px;padding:16px;margin-bottom:12px">'
+      +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--verde);margin-bottom:10px">🏢 Abono mensual</div>'
+      +'<div style="font-size:16px;font-weight:900;color:var(--t)">'+item.edificio+'</div>'
+      +'<div style="font-size:12px;color:var(--t3);margin-top:4px">'+item.nombre+'</div>'
+      +'<div style="font-size:22px;font-weight:900;color:var(--verde);margin-top:12px">$'+fmtN(item.monto)+'</div>'
+      +'<div style="font-size:11px;color:var(--t3);margin-top:4px">Mantenimiento preventivo mensual de instalaciones eléctricas en espacios comunes</div>'
+      +'</div>';
+    modal.style.display='block';
+    return;
+  }
+
+  // MATERIALES DE ABONO y PARTICULARES — muestran registros del Sheet
+  var regsEdif=window._histRegsCompletos.filter(function(r){
+    return (r.Edificio||'')===(item.edificio||'');
+  }).sort(function(a,b){return (a.Fecha||'')<(b.Fecha||'')?-1:1;});
 
   if(regsEdif.length===0){
     body.innerHTML='<div style="color:var(--t3);text-align:center;padding:20px;font-size:13px">No hay detalle de registros disponible para este ítem.<br>Solo se guardó el resumen en este período.</div>'
