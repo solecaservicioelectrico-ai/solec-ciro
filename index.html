@@ -452,7 +452,7 @@ input[type=date]{width:100%;background:var(--s2);border:1px solid var(--borde);b
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topDate"></div>
-      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.47</span>
+      <span style="font-size:10px;color:var(--t3);margin-right:4px;">v2.48</span>
       <div class="topbar-user">CIRO</div>
     </div>
   </div>
@@ -3293,26 +3293,46 @@ function p3GuardarSheet(){
     if(item.tipo==='abono'){
       concepto='Mantenimiento preventivo de instalaciones eléctricas en espacios comunes · '+item.edificio;
     } else if(item.tipo==='mats'){
-      // Para materiales: texto de las intervenciones de cada visita
+      // Para materiales: intervenciones + detalle de materiales por visita
       var lineasMats=[];
       if(item.regs&&item.regs.length){
         item.regs.forEach(function(r){
           var fecha=String(r.Fecha||'').split('T')[0].split('-').reverse().join('/');
           var desc=cLimpiarMO?cLimpiarMO(String(r.Intervenciones||'').trim()):String(r.Intervenciones||'');
-          if(desc)lineasMats.push(fecha+': '+desc.split('\n').filter(Boolean).join(' / '));
-
+          var linea=fecha+(desc?': '+desc.split('\n').filter(Boolean).join(' / '):'');
+          // Agregar detalle de materiales de esta visita
+          var mr=extraerMateriales(r);
+          var matLines=Object.entries(mr).map(function(e){
+            return '  · '+e[1].qty+' '+e[1].un+' '+e[0];
+          });
+          if(matLines.length)linea+=('\n'+matLines.join('\n'));
+          if(linea.trim())lineasMats.push(linea);
         });
       }
-      concepto=lineasMats.join('\n')||item.nombre;
+      concepto=lineasMats.join('\n\n')||item.nombre;
 
     } else if(item.tipo==='part'){
-      // Para particulares: el reg tiene las intervenciones
+      // Para particulares: fecha + intervenciones con armarConceptoMO
       var r=item.reg;
       if(r){
         var fecha=String(r.Fecha||'').split('T')[0].split('-').reverse().join('/');
-        var desc=cLimpiarMO?cLimpiarMO(String(r.Intervenciones||'').trim()):String(r.Intervenciones||'');
-        concepto=fecha+(desc?'\n'+desc:'');
-
+        var ivsR=parsearInterv(r.Intervenciones||'');
+        var ivsMOr=ivsR.filter(function(iv){return !iv.esMats;});
+        if(ivsMOr.length){
+          var lineasPart=ivsMOr.map(function(iv,i){
+            return (i+1)+'. '+armarConceptoMO(iv,item.edificio,fecha);
+          });
+          concepto=fecha+'\n'+lineasPart.join('\n');
+        } else {
+          var desc=cLimpiarMO?cLimpiarMO(String(r.Intervenciones||'').trim()):String(r.Intervenciones||'');
+          concepto=fecha+(desc?'\n'+desc:'');
+        }
+        // Agregar detalle de materiales si los hay
+        var mrPart=extraerMateriales(r);
+        var matLinesPart=Object.entries(mrPart).map(function(e){
+          return '· '+e[1].qty+' '+e[1].un+' '+e[0];
+        });
+        if(matLinesPart.length)concepto+='\n\nMateriales:\n'+matLinesPart.join('\n');
       } else {
         concepto=item.nombre;
       }
